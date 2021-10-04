@@ -1,0 +1,38 @@
+// Load the main set.mm database
+load "examples/examples.mm"
+
+// Fetch hypotheses from the 'antecedent' part of the goal
+tactics deduction ()
+{ try
+	{ apply ~simpr }
+	{ apply ~simpl }
+	{ apply ~simplr }
+	{ apply ~simpll }
+	{ apply ~simpllr }
+	{ apply ~simplll }
+	{ apply ~simp-4r }
+	{ apply ~simp-4l }
+	{ apply ~simp-5r }
+	{ apply ~simp-5l }
+}
+
+// Prove that an expression is a real number, deduction version
+tactics reals_closure ()
+{ try
+	{ apply ~a1i ! }
+	{ use deduction }
+	{ match $ &Wgoal $
+		$ ( &W1 -> &C1 e. RR ) $ { match $ &C1 $
+			$ -u &C2 $ { apply ~renegcld { use reals_closure } }
+			$ ( &C2 + &C3 ) $ { apply ~readdcld { use reals_closure } { use reals_closure } }
+			$ ( &C2 - &C3 ) $ { apply ~resubcld { use reals_closure } { use reals_closure } }
+			$ ( &C2 x. &C3 ) $ { apply ~remulcld { use reals_closure } { use reals_closure } }
+			$ ( &C2 / 2 ) $ { apply ~rehalfcld { use reals_closure } }
+			$ ( &C2 / &C3 ) $ { apply ~redivcld { use reals_closure } { use reals_closure } { use deduction } }
+		}
+		$ &C1 e. RR $ !
+	}
+}
+
+// Prove an example theorem
+proof ~rummex1 { use reals_closure }
