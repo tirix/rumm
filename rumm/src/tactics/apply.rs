@@ -63,7 +63,7 @@ impl Tactics for Apply {
                         substeps.push(tactics.execute(&mut sub_context)?);
                     }
                     println!("Unification success");
-                    Ok(ProofStep::new(
+                    Ok(ProofStep::apply(
                         self.theorem,
                         substeps.into_boxed_slice(),
                         context.goal().clone(),

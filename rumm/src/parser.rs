@@ -109,7 +109,7 @@ impl<'a> Parser<'a> {
             lexer: Token::lexer(str),
             last_description: None,
             db: Db::default(),
-            debug: true,
+            debug: false,
         }
     }
 

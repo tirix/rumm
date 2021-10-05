@@ -4,6 +4,7 @@ load "examples/examples.mm"
 // Fetch hypotheses from the 'antecedent' part of the goal
 tactics deduction ()
 { try
+	{ apply ~a1i ! }
 	{ apply ~simpr }
 	{ apply ~simpl }
 	{ apply ~simplr }

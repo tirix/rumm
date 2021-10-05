@@ -121,7 +121,6 @@ impl Db {
     }
 
     pub fn parse_formula(&self, symbols: Vec<Symbol>) -> Result<Formula> {
-        println!("Will parse {:?}", symbols);
         let mut database = self.intern.borrow_mut();
         let grammar = database.grammar_result().clone();
         let nset = database.name_result();
@@ -130,8 +129,25 @@ impl Db {
             .map_err(|diag| Error::msg(format!("{:?}", diag)))
     }
 
-    ///
-    pub fn build_proof(
+    /// Add a hypothesis step to a proof array
+    pub fn build_proof_hyp(
+        &self,
+        label: Label,
+        formula: Formula,
+        stack_buffer: &mut Vec<u8>,
+        arr: &mut ProofTreeArray,
+    ) -> Option<usize> {
+        let mut database = self.intern.borrow_mut();
+        let sset = database.parse_result().clone();
+        let nset = database.name_result().clone();
+        let token = nset.atom_name(label);
+        let address = nset.lookup_label(token)?.address;
+        let range = formula.append_to_stack_buffer(stack_buffer, &sset, &nset);
+        Some(arr.build(address, Default::default(), stack_buffer, range))
+    }
+
+    /// Add a normal step to a proof array
+    pub fn build_proof_step(
         &self,
         label: Label,
         formula: Formula,
@@ -145,10 +161,10 @@ impl Db {
         let nset = database.name_result().clone();
         let scope = database.scope_result().clone();
         let token = nset.atom_name(label);
-        let address = nset.lookup_label(token).unwrap().address;
+        let address = nset.lookup_label(token)?.address;
         let range = formula.append_to_stack_buffer(stack_buffer, &sset, &nset);
-        let frame = scope.get(token).unwrap();
         let mut hyps = vec![];
+        let frame = scope.get(token).unwrap();
         for hyp in frame.hypotheses.iter() {
             if let Hyp::Floating(sa, _, _) = hyp {
                 let sref = sset.statement(*sa);

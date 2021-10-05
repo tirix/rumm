@@ -9,9 +9,13 @@ cc1 $f class &C1 $.
 cc2 $f class &C2 $.
 cc3 $f class &C3 $.
 
-$( Example theorem to be proven using Rumm $)
-rummex1 $p |- ( ( ( ( ( A e. RR /\ B e. RR ) /\ C e. RR ) /\ D e. RR ) /\ D =/= 0 )
-                  -> ( -u A x. ( ( B - C ) / D ) ) e. RR ) $=
-  ( cr wcel wa cc0 cneg cmin cdiv simp-4l renegcld simp-4r simpllr resubcld
-    wne co simplr simpr redivcld remulcld ) AEFZBEFZGZCEFZGZDEFZGZDHQZGZAIBCJ
-    RZDKRUKAUCUDUFUHUJLMUKULDUKBCUCUDUFUHUJNUEUFUHUJOPUGUHUJSUIUJTUAUB $.
+${
+  rummex1.1 $e |- D e. RR $.
+  rummex1.2 $e |- D =/= 0 $.
+  $( Example theorem to be proven using Rumm $)
+  rummex1 $p |- ( ( ( A e. RR /\ B e. RR ) /\ C e. RR )
+                    -> ( -u A x. ( ( B - C ) / D ) ) e. RR ) $=
+    ( cr wcel wa cneg cmin cdiv simpll renegcld simplr simpr resubcld a1i cc0
+      co wne redivcld remulcld ) AGHZBGHZIZCGHZIZAJBCKTZDLTUHAUDUEUGMNUHUIDUHBC
+      UDUEUGOUFUGPQDGHUHERDSUAUHFRUBUC $.
+$}

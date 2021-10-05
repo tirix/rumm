@@ -37,13 +37,11 @@ impl Tactics for Hypothesis {
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
         for (label, hyp) in context.hypotheses().iter() {
-            if let Some(subst) = context.goal().unify(hyp) {
+            if context.goal().eq(hyp) {
                 println!("Matched hypothesis!");
-                return Ok(ProofStep::new(
+                return Ok(ProofStep::hyp(
                     *label,
-                    Box::new([]),
                     context.goal().clone(),
-                    subst,
                 ));
             }
         }
