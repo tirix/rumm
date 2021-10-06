@@ -1,3 +1,4 @@
+use crate::lang::ProofStep;
 use crate::lang::Db;
 use crate::lang::DisplayPair;
 use crate::lang::Hypotheses;
@@ -13,7 +14,7 @@ pub struct Context {
     pub(crate) db: Db,
     goal: Formula,
     hypotheses: Hypotheses,
-    // subgoals TODO
+    subgoals: Vec<(Formula, ProofStep)>,
     variables: Substitutions,
     tactics_definitions: TacticsDict,
 }
@@ -34,10 +35,12 @@ impl<'a> Context {
         println!("Proving {}", DisplayPair(&goal, &db));
         let mut variables = Substitutions::default();
         db.set_goal(&mut variables, goal.clone());
+        let subgoals = vec![];
         Context {
             db,
             goal,
             hypotheses,
+            subgoals,
             variables,
             tactics_definitions,
         }
@@ -55,17 +58,8 @@ impl<'a> Context {
             db: self.db.clone(),
             goal,
             hypotheses: self.hypotheses.clone(),
+            subgoals: self.subgoals.clone(),
             variables,
-            tactics_definitions: self.tactics_definitions.clone(),
-        }
-    }
-
-    pub fn with_hyp(&self, _formula: Formula) -> Self {
-        Self {
-            db: self.db.clone(),
-            goal: self.goal.clone(),
-            hypotheses: self.hypotheses.clone(),
-            variables: self.variables.clone(),
             tactics_definitions: self.tactics_definitions.clone(),
         }
     }
@@ -77,9 +71,14 @@ impl<'a> Context {
             db: self.db.clone(),
             goal: self.goal.clone(),
             hypotheses: self.hypotheses.clone(),
+            subgoals: self.subgoals.clone(),
             variables,
             tactics_definitions: self.tactics_definitions.clone(),
         }
+    }
+
+    pub fn add_subgoal(&mut self, formula: Formula, step: ProofStep) {
+        self.subgoals.push((formula, step));
     }
 
     pub fn goal(&self) -> &Formula {

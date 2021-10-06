@@ -50,12 +50,11 @@ impl Tactics for Subgoal {
         "A tactics which allows to insert a subgoal, prove it or assume it, and then move forward with the rest of the proof.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
+    fn execute(&self, mut context: &mut Context) -> TacticsResult {
         let mut context1 = context.with_goal(self.subgoal.clone());
-        if let Ok(_step1) = self.tactics1.execute(&mut context1) {
-            // TODO store the subgoal and its proof step in the context!
-            let mut context2 = context.with_hyp(self.subgoal.clone());
-            self.tactics2.execute(&mut context2)
+        if let Ok(step1) = self.tactics1.execute(&mut context1) {
+            context.add_subgoal(self.subgoal.clone(), step1);
+            self.tactics2.execute(&mut context)
         } else {
             Err(TacticsError::Error)
         }

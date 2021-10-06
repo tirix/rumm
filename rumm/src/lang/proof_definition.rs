@@ -11,6 +11,7 @@ use metamath_knife::proof::ProofTreeArray;
 use metamath_knife::Formula;
 use metamath_knife::Label;
 
+#[derive(Clone)]
 /// One step in a proof
 pub enum ProofStep {
 	Apply {
