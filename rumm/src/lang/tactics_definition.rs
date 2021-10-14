@@ -1,9 +1,12 @@
+use crate::lang::Expression;
+use crate::tactics::TacticsError;
+use crate::lang::TacticsExpression;
 use crate::context::Context;
 use crate::error::Result;
 use crate::lang::ParameterDefinition;
 use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser, Token};
-use crate::tactics::{Tactics, TacticsResult};
+use crate::tactics::TacticsResult;
 use core::fmt::Formatter;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -43,7 +46,7 @@ pub struct TacticsDefinition {
     pub name: String,
     pub description: String,
     pub parameter_definition: Vec<ParameterDefinition>,
-    tactics: Box<dyn Tactics>,
+    tactics: TacticsExpression,
 }
 
 impl Display for TacticsDefinition {
@@ -92,5 +95,17 @@ impl TacticsDefinition {
     //
     pub fn execute(&self, context: &mut Context) -> TacticsResult {
         self.tactics.execute(context)
+    }
+
+    pub fn add_variables(&self, context: &mut Context, parameters: &Vec<Expression>) -> TacticsResult<()> {
+        for (param, def) in parameters.iter().zip(self.parameter_definition.iter()) {
+            // Set parameters as variables in the context...
+            match (param, def) {
+                (Expression::Tactics(t), ParameterDefinition::Tactics(id)) => { context.add_tactics_variable(id.to_string(), t.evaluate(context)?); },
+                (Expression::Statement(l), ParameterDefinition::Theorem(id)) => { context.add_label_variable(id.to_string(), l.evaluate(context)?); },
+                _ => Err(TacticsError::Error)?
+            }
+        }
+        Ok(())
     }
 }

@@ -7,7 +7,7 @@ use core::fmt::Formatter;
 use metamath_knife::database::DbOptions;
 use metamath_knife::export::export_mmp_proof_tree;
 use metamath_knife::formula::Substitutions;
-use metamath_knife::parser::as_str;
+use metamath_knife::parser::{as_str, StatementType};
 use metamath_knife::proof::ProofTreeArray;
 use metamath_knife::scopeck::Hyp;
 use metamath_knife::verify::ProofBuilder;
@@ -53,34 +53,34 @@ impl Db {
             return Err(Error::DBError(gerr));
         }
         println!("{}", "ok".green());
+        //let testx = self.get_theorem_label("testx".to_string()).unwrap();
+        //let (_f, ..) = self.get_theorem_formulas(testx).unwrap();
+        //println!("TESTX {}", f.debug(self.intern.borrow_mut().name_result()));
         Ok(())
     }
 
     pub fn get_symbol(&self, name: String) -> Result<Symbol> {
-        match self
+        Ok(self
             .intern
             .borrow_mut()
             .name_result()
             .lookup_symbol(name.as_bytes())
-        {
-            Some(lookup) => Ok(lookup.atom),
-            None => Err(Error::msg(format!("Unknown symbol {}", name))),
-        }
+            .ok_or(Error::msg(format!("Unknown symbol {}", name)))?
+            .atom
+        )
     }
 
     pub fn get_theorem_label(&self, name: String) -> Result<Label> {
-        match self
+        Ok(self
             .intern
             .borrow_mut()
             .name_result()
             .lookup_label(name.as_bytes())
-        {
-            Some(lookup) => Ok(lookup.atom),
-            None => Err(Error::parse_error(
+            .ok_or(Error::parse_error(
                 "A known theorem label",
                 Token::TheoremLabel(name),
-            )),
-        }
+            ))?.atom
+        )
     }
 
     pub fn set_goal(&self, substitutions: &mut Substitutions, goal: Formula) {
@@ -89,9 +89,7 @@ impl Db {
         substitutions.insert(goal_label, goal);
     }
 
-    /// The first item in the tuple shall be the desired formula, the second, the list of essential hypotheses
-    pub fn get_theorem_formulas(&self, label: Label) -> Option<(Formula, Hypotheses)> {
-        let mut database = self.intern.borrow_mut();
+    fn get_theorem_formulas_internal(database: &mut Database, label: Label) -> Option<(Formula, Hypotheses)> {
         let nset = database.name_result().clone();
         let sset = database.parse_result().clone();
         let token = nset.atom_name(label);
@@ -120,13 +118,42 @@ impl Db {
         Some((formula, hypotheses.into_boxed_slice()))
     }
 
+    /// The first item in the tuple shall be the desired formula, the second, the list of essential hypotheses
+    pub fn get_theorem_formulas(&self, label: Label) -> Option<(Formula, Hypotheses)> {
+        let mut database = self.intern.borrow_mut();
+        Self::get_theorem_formulas_internal(&mut database, label)
+    }
+
     pub fn parse_formula(&self, symbols: Vec<Symbol>) -> Result<Formula> {
         let mut database = self.intern.borrow_mut();
         let grammar = database.grammar_result().clone();
         let nset = database.name_result();
         grammar
-            .parse_formula(&mut symbols.into_iter(), grammar.typecodes(), nset)
+            .parse_formula(&mut symbols.into_iter(), &grammar.typecodes(), nset)
             .map_err(|diag| Error::msg(format!("{:?}", diag)))
+    }
+
+    // pub fn debug_formula(&self, f: &Formula) -> String {
+    //     let mut database = self.intern.borrow_mut();
+    //     let nset = database.name_result();
+    //     f.debug(nset)
+    // }
+
+    pub fn statements(&self) -> impl Iterator<Item = (Label, Formula, Hypotheses)> + '_ {
+        let database:&mut Database = &mut self.intern.borrow_mut();
+        let sset = database.parse_result().clone();
+        let nset = database.name_result().clone();
+        sset.segments().iter().flat_map(|s| { s.into_iter() }).filter_map(move |sref| {
+            match sref.statement_type() {
+                StatementType::Axiom | StatementType::Provable => {
+                    let name = sref.label();
+                    let label = nset.lookup_label(name)?.atom;
+                    let (formula, hyps) = Self::get_theorem_formulas_internal(database, label)?;
+                    Some((label, formula, hyps))
+                },
+                _ => None,
+            }
+        }).collect::<Vec<_>>().into_iter()
     }
 
     /// Add a hypothesis step to a proof array
@@ -171,7 +198,7 @@ impl Db {
                 let label = nset
                     .lookup_label(sref.label())
                     .map_or(Label::default(), |l| l.atom);
-                let formula = &substitutions[&label];
+                let formula = &substitutions[label];
                 let proof_tree_index = formula.build_syntax_proof::<usize, Vec<usize>>(
                     stack_buffer,
                     arr,
@@ -223,3 +250,21 @@ impl Display for Formula {
         Ok(())
     }
 }
+
+// impl Display for Substitutions {
+//     fn format(&self, f: &mut Formatter, db: &Db) -> std::result::Result<(), std::fmt::Error> {
+//         for (l,fmla) in self.0.iter() {
+//             f.write_str("\n    ")?;
+//             l.format(f, db)?;
+//             f.write_str(" => ")?;
+//             fmla.format(f, db)?;
+//         }
+//         Ok(())
+//     }
+// }
+
+// impl Display for Box<Substitutions> {
+//     fn format(&self, f: &mut Formatter, db: &Db) -> std::result::Result<(), std::fmt::Error> {
+//         self.deref().format(f, db)
+//     }
+// }

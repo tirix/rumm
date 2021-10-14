@@ -1,3 +1,6 @@
+use crate::lang::TacticsExpression;
+use metamath_knife::Formula;
+use crate::lang::FormulaExpression;
 use crate::context::Context;
 use crate::error::Result;
 use crate::lang::DisplayPair;
@@ -7,19 +10,18 @@ use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
 use core::fmt::Formatter;
-use metamath_knife::Formula;
 
 /// A tactics which tries a list of tactics until one of them produces a proof.
 ///
 pub struct Match {
-    formula: Formula,
-    matches: Vec<(Formula, Box<dyn Tactics>)>,
+    target: FormulaExpression,
+    matches: Vec<(Formula, TacticsExpression)>,
 }
 
 impl Display for Match {
     fn format(&self, fmt: &mut Formatter, db: &Db) -> std::result::Result<(), std::fmt::Error> {
-        fmt.write_str("{ Match \n")?;
-        self.formula.format(fmt, db)?;
+        fmt.write_str("{ Match\n")?;
+        self.target.format(fmt, db)?;
         for (f, t) in &self.matches {
             f.format(fmt, db)?;
             t.format(fmt, db)?;
@@ -30,12 +32,12 @@ impl Display for Match {
 
 impl Parse for Match {
     fn parse(parser: &mut Parser) -> Result<Self> {
-        let formula = parser.parse_formula()?;
+        let target = parser.parse_formula_expression()?;
         let mut matches = Vec::new();
         while let Some(f) = parser.parse_optional_formula()? {
             matches.push((f, parser.parse_tactics()?));
         }
-        Ok(Match { formula, matches })
+        Ok(Match { target, matches })
     }
 }
 
@@ -49,12 +51,22 @@ impl Tactics for Match {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
-        let model = self.formula.substitute(context.variables());
+        println!("-- Match --");
+        let model = match &self.target {
+            FormulaExpression::Formula(formula) => formula.substitute(context.variables()),
+            FormulaExpression::Goal => context.goal().clone(),
+            FormulaExpression::Statement(label) => context.get_theorem_formulas(label.evaluate(context)?)
+                .ok_or(TacticsError::Error)?.0, // unknown statement
+        };
+        println!("  Target {}", DisplayPair(&model, &context.db));
+//        println!("  {}", context.debug_formula(&model));
         for m in self.matches.iter() {
+            println!("  Trying {}", DisplayPair(&m.0, &context.db));
+//            println!("  {}", context.debug_formula(&m.0));
             if let Some(subst) = model.unify(&m.0) {
                 println!(
                     "Matched {} with {}",
-                    DisplayPair(&self.formula, &context.db),
+                    DisplayPair(&model, &context.db),
                     DisplayPair(&m.0, &context.db)
                 );
                 let mut sub_context = context.with_variables(&subst);

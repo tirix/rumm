@@ -1,3 +1,4 @@
+use crate::lang::Expression;
 use crate::context::Context;
 use crate::error::Result;
 use crate::lang::{Db, Display};
@@ -11,15 +12,14 @@ use core::fmt::Formatter;
 ///
 pub struct UseScriptTactics {
     name: String,
-    // parameters: Vec<Value>,
+    parameters: Vec<Expression>,
 }
 
 impl Parse for UseScriptTactics {
     fn parse(parser: &mut Parser) -> Result<Self> {
         let name = parser.parse_identifier()?;
-        // TODO : parse parameters
-        parser.parse_curly_bracket_close()?;
-        Ok(UseScriptTactics { name })
+        let parameters = parser.parse_parameters()?;
+        Ok(UseScriptTactics { name, parameters })
     }
 }
 
@@ -41,10 +41,10 @@ impl Tactics for UseScriptTactics {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
+        println!("-- Use --");
         if let Some(tactics_definition) = context.clone().get_tactics_definition(self.name.clone())
         {
-            // Set parameters as variables in the context...
-
+            tactics_definition.add_variables(context, &self.parameters)?;
             tactics_definition.execute(context)
         } else {
             Err(TacticsError::Error)

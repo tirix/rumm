@@ -1,19 +1,26 @@
+use crate::lang::DisplayPair;
+use crate::lang::FormulaExpression;
+use metamath_knife::{Label, formula::Substitutions};
+use std::collections::HashMap;
+use crate::lang::TacticsExpression;
 use crate::context::Context;
 use crate::error::Result;
 use crate::lang::ProofStep;
 use crate::lang::{Db, Display};
-use crate::parser::{Parse, Parser};
+use crate::lang::StatementExpression;
+use crate::parser::{Parse, Parser, OptionalTactics};
 use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
 use core::fmt::Formatter;
-use metamath_knife::Label;
+
 
 /// A tactics which applies a given theorem to prove the goal.
 ///
 pub struct Apply {
-    theorem: Label,
-    subtactics: Vec<Box<dyn Tactics>>,
+    theorem: StatementExpression,
+    subtactics: Vec<TacticsExpression>,
+    substitutions: HashMap<Label, FormulaExpression>,
 }
 
 impl Display for Apply {
@@ -29,15 +36,27 @@ impl Display for Apply {
 
 impl Parse for Apply {
     fn parse(parser: &mut Parser) -> Result<Self> {
-        let theorem = parser.parse_theorem_label()?;
+        let theorem = StatementExpression::parse(parser)?;
         let mut subtactics = Vec::new();
-        while let Some(t) = parser.parse_optional_tactics()? {
-            subtactics.push(t);
+        let mut substitutions = HashMap::new();
+        loop {
+            match parser.parse_optional_tactics()? {
+                OptionalTactics::Some(t) => subtactics.push(t),
+                OptionalTactics::None => break,
+                OptionalTactics::With => {
+                    while let Some(l) = parser.parse_optional_statement()? {
+                        let f = parser.parse_formula_expression()?;
+                        substitutions.insert(l, f);
+                    }
+                    break;
+                }
+            }
         }
-        // TODO check count!
+        
         Ok(Apply {
             theorem,
             subtactics,
+            substitutions,
         })
     }
 }
@@ -52,11 +71,22 @@ impl Tactics for Apply {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
-        if let Some((theorem_formula, hyps)) = context.get_theorem_formulas(self.theorem) {
-            if let Some(subst) = context.goal().unify(&theorem_formula) {
-                println!("Attempting apply");
+        println!("-- Apply --");
+        //println!("  vars:{}", DisplayPair(context.variables(), &context.db));
+        let mut my_subst = Substitutions::default();
+        for (l,f) in self.substitutions.iter() {
+            my_subst.insert(*l, f.evaluate(context)?.substitute(context.variables()));
+        }
+
+        let theorem = self.theorem.evaluate(context)?;
+        println!("  Attempting apply {}", DisplayPair(&theorem, &context.db));
+        if let Some((theorem_formula, hyps)) = context.get_theorem_formulas(theorem) {
+            if let Some(mut subst) = context.goal().unify(&theorem_formula) {
+                subst.extend(&my_subst);
+                //println!("  subst:{}", DisplayPair(&subst, &context.db));
                 if hyps.len() == self.subtactics.len() {
                     let mut substeps = vec![];
+                    // TODO check count!
                     for ((_hyp_label, hyp_formula), tactics) in hyps.iter().zip(&self.subtactics) {
                         let sub_goal = hyp_formula.substitute(&subst);
                         let mut sub_context = context.with_goal(sub_goal);
@@ -64,7 +94,7 @@ impl Tactics for Apply {
                     }
                     println!("Unification success");
                     Ok(ProofStep::apply(
-                        self.theorem,
+                        theorem,
                         substeps.into_boxed_slice(),
                         context.goal().clone(),
                         subst,

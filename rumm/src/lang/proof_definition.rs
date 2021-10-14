@@ -1,9 +1,9 @@
+use crate::lang::TacticsExpression;
 use crate::context::Context;
 use crate::error::Result;
 use crate::lang::TacticsDict;
 use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser};
-use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use core::fmt::Formatter;
 use metamath_knife::formula::Substitutions;
@@ -90,7 +90,7 @@ impl ProofStep {
 
 pub struct ProofDefinition {
     theorem: Label,
-    tactics: Box<dyn Tactics>,
+    tactics: TacticsExpression,
 }
 
 impl Display for ProofDefinition {
@@ -112,9 +112,10 @@ impl Parse for ProofDefinition {
 impl ProofDefinition {
     pub fn prove(&self, db: Db, tactics_definitions: TacticsDict) -> std::result::Result<ProofStep, TacticsError> {
         if let Some((theorem_formula, essential_hypotheses)) = db.get_theorem_formulas(self.theorem) {
+            println!("====================================================\n\n");
+            println!("Proof for {:?}:", self.theorem.to_string(&db));
             let mut context =
                 Context::new(db.clone(), theorem_formula, essential_hypotheses, tactics_definitions);
-            println!("Proof for {:?}:", self.theorem.to_string(&db));
             self.tactics.execute(&mut context)
         } else {
             println!("Unknown theorem!");

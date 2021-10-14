@@ -1,9 +1,10 @@
 // Load the main set.mm database
 load "examples/examples.mm"
 
-// Fetch hypotheses from the 'antecedent' part of the goal
+// Fetch hypotheses from the hypothesis or the 'antecedent' part of the goal
 tactics deduction ()
 { try
+	!
 	{ apply ~a1i ! }
 	{ apply ~simpr }
 	{ apply ~simpl }
@@ -17,12 +18,102 @@ tactics deduction ()
 	{ apply ~simp-5l }
 }
 
+tactics equality ()
+{ try
+	{ use deduction }
+	{ apply ~eqidd }
+	{ match goal
+		$ ( ph -> ( ( ps /\ th ) <-> ( ch /\ ta ) ) ) $ { apply ~anbi12d { use equality } { use equality } }
+		$ ( ph -> ( ( ps \/ th ) <-> ( ch \/ ta ) ) ) $ { apply ~orbi12d { use equality } { use equality } }
+		$ ( ph -> ( A. x ps <-> A. x ch ) ) $ { apply ~albid { use equality } }
+		$ ( ph -> ( A. x e. A ps <-> A. x e. A ch ) ) $ { apply ~ralbidv { use equality } }
+		$ ( ph -> ( A. x e. A ps <-> A. x e. B ps ) ) $ { apply ~raleqdv { use equality } }
+		$ ( ph -> ( A. x e. A ps <-> A. x e. B ch ) ) $ { apply ~raleqbidv { use equality } { use equality } }
+		$ ( ph -> ( A e. B <-> C e. B ) ) $ { apply ~eleq1d { use equality } }
+		$ ( ph -> ( A e. B <-> A e. C ) ) $ { apply ~eleq2d { use equality } }
+		$ ( ph -> ( A e. B <-> C e. D ) ) $ { apply ~eleq12d { use equality } { use equality } }
+		$ ( ph -> ( A R B <-> C R B ) ) $ { apply ~breq1d { use equality } }
+		$ ( ph -> ( A R B <-> A R C ) ) $ { apply ~breq2d { use equality } }
+		$ ( ph -> ( A R B <-> C R D ) ) $ { apply ~breq12d { use equality } { use equality } }
+		$ ( ph -> ( A R B <-> A S B ) ) $ { apply ~breqd { use equality } }
+		$ ( ph -> ( A R B <-> C S D ) ) $ { apply ~breq123d { use equality } { use equality } { use equality } }
+
+		$ ( ph -> ( A O B ) = ( A P B ) ) $ { apply ~oveqd { use equality } }
+		$ ( ph -> ( A O B ) = ( C O B ) ) $ { apply ~oveq1d { use equality } }
+		$ ( ph -> ( A O B ) = ( A O C ) ) $ { apply ~oveq2d { use equality } }
+		$ ( ph -> ( F ` A ) = ( G ` A ) ) $ { apply ~fveq1d { use equality } }
+		$ ( ph -> ( F ` A ) = ( F ` B ) ) $ { apply ~fveq2d { use equality } }
+		$ ( ph -> ( F ` A ) = ( G ` B ) ) $ { apply ~fveq12d { use equality } { use equality } }
+		$ ( ph -> { x | ps } = { x | ch } ) $ { apply ~abbidv { use equality } }
+		$ ( ph -> { x e. A | ps } = { x e. A | ch } ) $ { apply ~rabbidv { use equality } }
+		$ ( ph -> { <. x , y >. | ps } = { <. x , y >. | ch } ) $ { apply ~opabbidv { use equality } }
+
+		$ ( ( ph /\ x = X ) -> ( F ` x ) = B ) $ { apply ~syl6eqr { use equality } ! with ~cB $ ( F ` X ) $ }
+	}
+}
+
+tactics existence ()
+{
+	?
+}
+
+tactics definition ( @T1 @T2 )
+{ match goal
+	$ ( &W1 -> ( &C1 ` &C2 ) = &C3 ) $
+	{ find
+		!
+		$ &C1 = ( &S1 e. &C4 |-> &C5 ) $
+		{ apply ~fvmptd
+			{ apply ~a1i ! }
+			{ use equality }
+			@T1
+			@T2
+			with
+			~vx $ &S1 $
+			~cB $ &C5 $
+			~cD $ &C4 $
+		}
+	}
+	$ ( &W1 -> ( &C1 &C2 &C3 ) = &C4 ) $
+	?
+	$ ( &W1 -> ( &C1 &C2 &C3 <-> &W2 ) ) $
+	?
+}
+
+tactics deduction_apply ( ≈THM @T )
+{ match statement ≈THM
+	$ ( &W1 -> ( &W2 /\ &W3 ) ) $
+	{ match goal 
+		$ ( &W4 -> &W2 ) $
+		{ subgoal
+			{ apply ~simpld @T } // Here the second term is unknown and there is no way for Rumm to guess it
+			$ ( &W1 -> &W2 ) $
+			{ use deduction }
+		}
+		$ ( &W4 -> &W3 ) $
+		{ subgoal
+			{ apply ~simprd @T } // Here the first term is unknown and there is no way for Rumm to guess it
+			$ ( &W1 -> &W2 ) $
+			{ use deduction }
+		}
+	}
+	$ ( &W1 -> &W2 ) $
+	{ match goal 
+		$ ( &W4 -> &W2 ) $
+		{ subgoal
+			@T
+			$ ( &W1 -> &W2 ) $
+			{ use deduction }
+		}
+	}
+}
+
 // Prove that an expression is a real number, deduction version
 tactics reals_closure ()
 { try
 	{ apply ~a1i ! }
 	{ use deduction }
-	{ match $ &Wgoal $
+	{ match goal
 		$ ( &W1 -> &C1 e. RR ) $ { match $ &C1 $
 			$ -u &C2 $ { apply ~renegcld { use reals_closure } }
 			$ ( &C2 + &C3 ) $ { apply ~readdcld { use reals_closure } { use reals_closure } }
@@ -36,4 +127,23 @@ tactics reals_closure ()
 }
 
 // Prove an example theorem
-proof ~rummex1 { use reals_closure }
+proof ~rummex1
+{ use reals_closure }
+
+// 
+proof ~inftmrel
+{ apply ~syl6eqss
+	{ use definition { apply ~elex } { use existence } } }
+	{ apply ~opabssxp }
+	with ~cB $ { <. x , y >. | ( ( x e. B /\ y e. B ) /\ ( ( 0g ` W ) ( lt ` W ) x /\ A. n e. NN ( n ( .g ` W ) x ) ( lt ` W ) y ) ) } $
+}
+
+// WIP
+// proof ~ellimc
+// { subgoal
+// 	{ use deduction_apply ~limcfval { apply ~limcfval { use deduction } { use deduction } } }
+//	$ ( ph -> ( C e. ( F limCC B ) <-> C e. { y | ( z e. ( A u. { B } ) |-> if ( z = B , y , ( F ` z ) ) ) e. ( ( J CnP K ) ` B ) } ) ) $
+//	{ apply ~bitrd 
+//		?
+//	}
+// }
