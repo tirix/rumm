@@ -18,6 +18,19 @@ tactics deduction ()
 	{ apply ~simp-5l }
 }
 
+// First put the antecedent in a normal form then apply the given tactics
+tactics normalize ( @T )
+{ match goal
+	$ ( ( ph /\ ps /\ ch ) -> th ) $
+	{ apply ~sylbir { apply ~df-3an } { use normalize @T } with ~wps $ ( ( ph /\ ps ) /\ ch ) $ }
+	$ ( ( ph /\ ( ps /\ ch ) ) -> th ) $
+	{ apply ~anasss { use normalize @T } }
+	$ ( ( ( ph /\ ( ps /\ ch ) ) /\ th ) -> et ) $
+	{ apply ~sylbir { apply ~anbi1i { apply ~anass } } { use normalize @T } with ~wps $ ( ( ( ph /\ ps ) /\ ch ) /\ th ) $ }
+	$ ( ph -> ps ) $
+	@T
+}
+
 tactics equality ()
 { try
 	{ use deduction }
@@ -53,8 +66,35 @@ tactics equality ()
 }
 
 tactics existence ()
-{
-	?
+{ try
+	{ apply ~elex }
+	{ match goal 
+		$ ( ph -> { <. x , y >. | ( ( x e. &C1 /\ y e. &C2 ) /\ ps ) } e. _V ) $
+		{ apply ~opabex2
+			{ use existence }
+			{ use existence }
+			{ use normalize { use deduction } }
+			{ use normalize { use deduction } }
+			with
+			~cA $ &C1 $
+			~cB $ &C2 $
+			~cV $ _V $
+			~cW $ _V $
+		}
+		$ ( ph -> &C1 e. _V ) $
+		{ find
+			!
+			$ &C1 = ( &C2 ` &C3 ) $
+			{ apply ~a1i 
+				{ apply ~eqeltri
+					!
+					{ apply ~fvex } 
+					with
+					~cB $ ( &C2 ` &C3 ) $
+				}
+			}
+		}
+	}
 }
 
 tactics definition ( @T1 @T2 )
@@ -72,6 +112,7 @@ tactics definition ( @T1 @T2 )
 			~vx $ &S1 $
 			~cB $ &C5 $
 			~cD $ &C4 $
+			~cV $ _V $
 		}
 	}
 	$ ( &W1 -> ( &C1 &C2 &C3 ) = &C4 ) $
@@ -133,7 +174,7 @@ proof ~rummex1
 // 
 proof ~inftmrel
 { apply ~syl6eqss
-	{ use definition { apply ~elex } { use existence } } }
+	{ use definition { use existence } { use existence } }
 	{ apply ~opabssxp }
 	with ~cB $ { <. x , y >. | ( ( x e. B /\ y e. B ) /\ ( ( 0g ` W ) ( lt ` W ) x /\ A. n e. NN ( n ( .g ` W ) x ) ( lt ` W ) y ) ) } $
 }

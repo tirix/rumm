@@ -45,6 +45,13 @@ impl ProofStep {
     	ProofStep::Hyp { label, result }
     }
 
+    pub fn result(&self) -> &Formula {
+        match self {
+            ProofStep::Apply { result: r, .. } => r,
+            ProofStep::Hyp { result: r, .. } => r,
+        }
+    }
+
     fn add_to_proof_tree_array(
         &self,
         stack_buffer: &mut Vec<u8>,

@@ -44,8 +44,9 @@ impl Tactics for UseScriptTactics {
         println!("-- Use --");
         if let Some(tactics_definition) = context.clone().get_tactics_definition(self.name.clone())
         {
-            tactics_definition.add_variables(context, &self.parameters)?;
-            tactics_definition.execute(context)
+            let mut sub_context = context.without_variables();
+            tactics_definition.add_variables(&mut sub_context, &self.parameters)?;
+            tactics_definition.execute(&mut sub_context)
         } else {
             Err(TacticsError::Error)
         }

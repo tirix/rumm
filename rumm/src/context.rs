@@ -88,6 +88,19 @@ impl<'a> Context {
         }
     }
 
+    pub fn without_variables(&self) -> Self {
+        Self {
+            db: self.db.clone(),
+            goal: self.goal.clone(),
+            hypotheses: self.hypotheses.clone(),
+            subgoals: self.subgoals.clone(),
+            tactics_definitions: self.tactics_definitions.clone(),
+            variables: Substitutions::default(),
+            label_variables: self.label_variables.clone(),
+            tactics_variables: self.tactics_variables.clone(),
+        }
+    }
+
     pub fn add_subgoal(&mut self, formula: Formula, step: ProofStep) {
         self.subgoals.push((formula, step));
     }

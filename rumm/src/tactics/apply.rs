@@ -72,6 +72,7 @@ impl Tactics for Apply {
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
         println!("-- Apply --");
+        println!("  Proving {}", DisplayPair(context.goal(), &context.db));
         //println!("  vars:{}", DisplayPair(context.variables(), &context.db));
         let mut my_subst = Substitutions::default();
         for (l,f) in self.substitutions.iter() {
