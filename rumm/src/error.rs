@@ -1,12 +1,13 @@
 use crate::parser::Token;
-use metamath_knife::{diag::Diagnostic, parser::StatementAddress};
+use metamath_knife::diag::Notation;
+
 // Check if crate "thiserror" would help here?
 
 pub type Result<T = ()> = std::result::Result<T, Error>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Error {
-    DBError(Vec<(StatementAddress, Diagnostic)>),
+    DBError(Vec<Notation>),
     ParseError { expected: String, found: Token },
     MMLexerError,
     MessageError(String),
