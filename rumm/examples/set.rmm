@@ -69,7 +69,7 @@ tactics existence ()
 { try
 	{ apply ~elex }
 	{ match goal 
-		$ ( ph -> { <. x , y >. | ( ( x e. &C1 /\ y e. &C2 ) /\ ps ) } e. _V ) $
+		$ ( &W1 -> { <. &S1 , &S2 >. | ( ( &S1 e. &C1 /\ &S2 e. &C2 ) /\ &W2 ) } e. _V ) $
 		{ apply ~opabex2
 			{ use existence }
 			{ use existence }

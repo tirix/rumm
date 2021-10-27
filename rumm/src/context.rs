@@ -38,8 +38,6 @@ impl<'a> Context {
         tactics_definitions: TacticsDict,
     ) -> Self {
         println!("Proving {}", DisplayPair(&goal, &db));
-        let mut variables = Substitutions::default();
-        db.set_goal(&mut variables, goal.clone());
         let subgoals = vec![];
         Context {
             db,
@@ -47,7 +45,7 @@ impl<'a> Context {
             hypotheses,
             subgoals,
             tactics_definitions,
-            variables,
+            variables: Substitutions::default(),
             label_variables: HashMap::default(),
             tactics_variables: HashMap::default(),
         }
@@ -59,15 +57,13 @@ impl<'a> Context {
 
     pub fn with_goal(&self, goal: Formula) -> Self {
         println!("Proving {}", DisplayPair(&goal, &self.db));
-        let mut variables = self.variables.clone();
-        self.db.set_goal(&mut variables, goal.clone());
         Self {
             db: self.db.clone(),
             goal,
             hypotheses: self.hypotheses.clone(),
             subgoals: self.subgoals.clone(),
             tactics_definitions: self.tactics_definitions.clone(),
-            variables,
+            variables: self.variables.clone(),
             label_variables: self.label_variables.clone(),
             tactics_variables: self.tactics_variables.clone(),
         }

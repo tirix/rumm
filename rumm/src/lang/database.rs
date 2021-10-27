@@ -14,7 +14,7 @@ use metamath_knife::Database;
 use metamath_knife::Formula;
 use metamath_knife::Label;
 use metamath_knife::Symbol;
-use std::fmt::Display as StdDisplay;
+use std::ops::Deref;
 use std::io::Write;
 use std::sync::Arc;
 
@@ -94,18 +94,12 @@ impl Db {
         )
     }
 
-    pub fn set_goal(&self, substitutions: &mut Substitutions, goal: Formula) {
-        // TODO make this faster!
-        let goal_label = self.get_theorem_label("wgoal".to_string()).unwrap();
-        substitutions.insert(goal_label, goal);
-    }
-
     pub fn get_theorem_formulas(&self, label: Label) -> Option<(Formula, Hypotheses)> {
         let database = self.intern.borrow();
         let sref = database.statement_by_label(label)?;
         let formula = database.stmt_parse_result().get_formula(&sref)?.clone();
         let frame = database.get_frame(label)?;
-        let hypotheses: Vec<(Label, Formula)> = frame.essentials().collect();
+        let hypotheses: Vec<(Label, Formula)> = frame.essentials().map(|(l,f)| { (l, f.clone()) }).collect();
         Some((formula, hypotheses.into_boxed_slice()))
     }
 
@@ -172,7 +166,9 @@ impl Db {
         let frame = database.get_frame(label)?;
         let mut hyps = vec![];
         for label in frame.floating() {
-            let formula = &substitutions[label];
+            let formula = &substitutions.get(label).unwrap_or_else(|| {
+                panic!("While building proof using {}: No substitution for {}", as_str(token), as_str(database.name_result().atom_name(label)));
+            });
             let proof_tree_index = formula.as_ref(&database).build_syntax_proof::<usize, Vec<usize>>(
                 stack_buffer,
                 arr,
@@ -210,7 +206,14 @@ impl Display for Symbol {
 impl Display for Formula {
     fn format(&self, f: &mut Formatter, db: &Db) -> std::result::Result<(), std::fmt::Error> {
         let database = db.intern.borrow();
-        self.as_ref(&database).fmt(f)
+        std::fmt::Display::fmt(&self.as_ref(&database), f)
+    }
+}
+
+impl Display for Substitutions {
+    fn format(&self, f: &mut Formatter, db: &Db) -> std::result::Result<(), std::fmt::Error> {
+        let database = db.intern.borrow();
+        std::fmt::Debug::fmt(&self.as_ref(&database), f)
     }
 }
 
@@ -226,8 +229,8 @@ impl Display for Formula {
 //     }
 // }
 
-// impl Display for Box<Substitutions> {
-//     fn format(&self, f: &mut Formatter, db: &Db) -> std::result::Result<(), std::fmt::Error> {
-//         self.deref().format(f, db)
-//     }
-// }
+impl Display for Box<Substitutions> {
+    fn format(&self, f: &mut Formatter, db: &Db) -> std::result::Result<(), std::fmt::Error> {
+        self.deref().format(f, db)
+    }
+}

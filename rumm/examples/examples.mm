@@ -1,9 +1,7 @@
 $[ ../../set.mm/set.mm $]
 
-$( Additional meta-variables required for the RMM script
-   Actually, only ` &Wgoal ` is really necessary and specific. $)
-$v &Wgoal &W1 &W2 &W3 &W4 &C1 &C2 &C3 &C4 &C5 &S1 $.
-wgoal $f wff &Wgoal $.
+$( Additional meta-variables required for the RMM script $)
+$v &W1 &W2 &W3 &W4 &C1 &C2 &C3 &C4 &C5 &S1 &S2 $.
 ww1 $f wff &W1 $.
 ww2 $f wff &W2 $.
 ww3 $f wff &W3 $.
@@ -14,6 +12,7 @@ cc3 $f class &C3 $.
 cc4 $f class &C4 $.
 cc5 $f class &C5 $.
 ss1 $f setvar &S1 $.
+ss2 $f setvar &S2 $.
 
 ${
   rummex1.1 $e |- D e. RR $.

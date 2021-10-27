@@ -70,7 +70,7 @@ impl Tactics for Find {
         for (label, formula, hyps) in context.clone().statements() {
             if let Ok(step) = self.check_match(context, &target, &formula, |subst| {
                 println!("Found match with {}", DisplayPair(&label, &context.db));
-                //println!("  subst:{}", DisplayPair(&subst, &context.db));
+                println!("  subst:{}", DisplayPair(subst, &context.db));
                 let mut substeps = vec![];
                 let mut failed = false;
                 for (_hyp_label, hyp_formula) in hyps.iter() {
@@ -86,11 +86,12 @@ impl Tactics for Find {
                 println!("Unification success");
                 let subgoal = formula.substitute(&subst);
                 println!("  subgoal = {}", DisplayPair(&subgoal, &context.db));
+                let subgoal_subst = subgoal.unify(&formula).ok_or_else(|| { TacticsError::Error })?;
                 Ok(ProofStep::apply(
                     label,
                     substeps.into_boxed_slice(),
                     subgoal.clone(),
-                    subst.clone(),
+                    subgoal_subst.clone(),
                 ))
             }) {
                 return Ok(step);
