@@ -12,6 +12,7 @@ mod use_script_tactics;
 use std::sync::Arc;
 pub use apply::Apply;
 pub use hypothesis::Hypothesis;
+use metamath_knife::formula::UnificationError;
 pub use r#match::Match;
 pub use r#try::Try;
 pub use skipped::Skipped;
@@ -29,6 +30,13 @@ pub type TacticsResult<T = ProofStep> = std::result::Result<T, TacticsError>;
 // TODO Add relevant errors
 pub enum TacticsError {
     Error,
+    UnificationError,
+}
+
+impl From<UnificationError> for TacticsError {
+    fn from(_: UnificationError) -> Self {
+        Self::UnificationError
+    }
 }
 
 /// The trait implemented by all tactics.

@@ -86,12 +86,13 @@ impl Tactics for Find {
                 println!("Unification success");
                 let subgoal = formula.substitute(&subst);
                 println!("  subgoal = {}", DisplayPair(&subgoal, &context.db));
-                let subgoal_subst = subgoal.unify(&formula).ok_or_else(|| { TacticsError::Error })?;
+                let mut subgoal_subst = Substitutions::new();
+                subgoal.unify(&formula, &mut subgoal_subst)?;
                 Ok(ProofStep::apply(
                     label,
                     substeps.into_boxed_slice(),
                     subgoal.clone(),
-                    subgoal_subst.clone(),
+                    Box::new(subgoal_subst.clone()),
                 ))
             }) {
                 return Ok(step);
@@ -105,13 +106,11 @@ impl Tactics for Find {
 impl Find {
     fn check_match<F>(&self, context: &Context, target: &Formula, formula: &Formula, make_proof_step: F) -> TacticsResult
         where F: Fn(&Box<Substitutions>) -> TacticsResult {
-        if let Some(subst) = formula.unify(&target) {
-            let step1 = make_proof_step(&subst)?;
-            let mut context2 = context.with_variables(&subst);
-            context2.add_subgoal(step1.result().clone(), step1);
-            Ok(self.tactics2.execute(&mut context2)?)
-        } else {
-            Err(TacticsError::Error)
-        }
+        let mut subst = Substitutions::new();
+        formula.unify(&target, & mut subst)?;
+        let step1 = make_proof_step(&Box::new(subst.clone()))?;
+        let mut context2 = context.with_variables(&subst);
+        context2.add_subgoal(step1.result().clone(), step1);
+        Ok(self.tactics2.execute(&mut context2)?)
     }
 }

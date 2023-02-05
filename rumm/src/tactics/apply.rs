@@ -83,30 +83,27 @@ impl Tactics for Apply {
         let theorem = self.theorem.evaluate(context)?;
         println!("  Attempting apply {}", DisplayPair(&theorem, &context.db));
         if let Some((theorem_formula, hyps)) = context.get_theorem_formulas(theorem) {
-            if let Some(mut subst) = context.goal().unify(&theorem_formula) {
-                subst.extend(&my_subst);
-                //println!("  subst:{}", DisplayPair(&subst, &context.db));
-                if hyps.len() == self.subtactics.len() {
-                    let mut substeps = vec![];
-                    // TODO check count!
-                    for ((_hyp_label, hyp_formula), tactics) in hyps.iter().zip(&self.subtactics) {
-                        let sub_goal = hyp_formula.substitute(&subst);
-                        let mut sub_context = context.with_goal(sub_goal);
-                        substeps.push(tactics.execute(&mut sub_context)?);
-                    }
-                    println!("Unification success");
-                    Ok(ProofStep::apply(
-                        theorem,
-                        substeps.into_boxed_slice(),
-                        context.goal().clone(),
-                        subst,
-                    ))
-                } else {
-                    println!("Hyps don't match");
-                    Err(TacticsError::Error)
+            let mut subst = Substitutions::new();
+            context.goal().unify(&theorem_formula, &mut subst)?;
+            subst.extend(&my_subst);
+            //println!("  subst:{}", DisplayPair(&subst, &context.db));
+            if hyps.len() == self.subtactics.len() {
+                let mut substeps = vec![];
+                // TODO check count!
+                for ((_hyp_label, hyp_formula), tactics) in hyps.iter().zip(&self.subtactics) {
+                    let sub_goal = hyp_formula.substitute(&subst);
+                    let mut sub_context = context.with_goal(sub_goal);
+                    substeps.push(tactics.execute(&mut sub_context)?);
                 }
+                println!("Unification success");
+                Ok(ProofStep::apply(
+                    theorem,
+                    substeps.into_boxed_slice(),
+                    context.goal().clone(),
+                    Box::new(subst),
+                ))
             } else {
-                println!("Unification failure");
+                println!("Hyps don't match");
                 Err(TacticsError::Error)
             }
         } else {

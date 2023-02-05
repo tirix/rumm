@@ -4,8 +4,9 @@ use crate::lang::*;
 use crate::script::Script;
 use crate::tactics::*;
 use logos::{Lexer, Logos};
-use metamath_knife::Formula;
+use metamath_knife::{Formula, Span};
 use metamath_knife::Label;
+use metamath_knife::grammar::FormulaToken;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
@@ -141,7 +142,7 @@ impl<'a> Parser<'a> {
             self.last_description = Some(description);
             token = self.lexer.next();
         }
-        if self.debug {
+        if self.debug && false {
             println!("\tToken: {:?} ({:?})", token, self.lexer.slice());
         }
         token
@@ -294,12 +295,13 @@ impl<'a> Parser<'a> {
         let mut mmlex = self.lexer.to_owned().morph();
         let mut symbols = Vec::new();
         for t in &mut mmlex {
+            let span = Span::new(0, 1); // We could use mmlex.spanned() to get the spans of each token!
             match t {
                 MMToken::Token(name) => {
-                    symbols.push(self.db.get_symbol(name)?);
+                    symbols.push(FormulaToken { symbol: self.db.get_symbol(name)?, span });
                 }
                 MMToken::Variable(name) => {
-                    symbols.push(self.db.get_symbol(name)?);
+                    symbols.push(FormulaToken { symbol: self.db.get_symbol(name)?, span });
                 }
                 MMToken::End => {
                     break;

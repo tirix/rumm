@@ -1,5 +1,6 @@
 use crate::lang::TacticsExpression;
 use metamath_knife::Formula;
+use metamath_knife::formula::Substitutions;
 use crate::lang::FormulaExpression;
 use crate::context::Context;
 use crate::error::Result;
@@ -63,7 +64,8 @@ impl Tactics for Match {
         for m in self.matches.iter() {
             println!("  Trying {}", DisplayPair(&m.0, &context.db));
 //            println!("  {}", context.debug_formula(&m.0));
-            if let Some(subst) = model.unify(&m.0) {
+            let mut subst = Substitutions::new();
+            if let std::result::Result::Ok(_) = model.unify(&m.0, &mut subst) {
                 println!(
                     "Matched {} with {}",
                     DisplayPair(&model, &context.db),

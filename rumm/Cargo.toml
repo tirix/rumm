@@ -13,5 +13,6 @@ logos = "0.12.0"
 chrono = "0.4"
 colored = "2"
 simple_logger = "1.13.0"
-metamath-knife = { path = "../../metamath-knife" }
-# metamath-knife = { git = "https://github.com/tirix/metamath-knife" }
+# metamath-knife = { path = "../../metamath-knife" }
+# metamath-knife = { git = "https://github.com/tirix/metamath-knife", tag="v0.3.6"}
+metamath-knife = { git = "https://github.com/david-a-wheeler/metamath-knife", tag="v0.3.6"}

@@ -2,17 +2,19 @@ use crate::error::{Error, Result};
 use crate::lang::Display;
 use crate::parser::Token;
 use colored::*;
+use metamath_knife::grammar::FormulaToken;
 use core::cell::RefCell;
 use core::fmt::Formatter;
+use metamath_knife::as_str;
 use metamath_knife::database::DbOptions;
 use metamath_knife::diag::DiagnosticClass;
 use metamath_knife::formula::Substitutions;
-use metamath_knife::parser::{as_str, StatementType};
 use metamath_knife::proof::ProofTreeArray;
 use metamath_knife::verify::ProofBuilder;
 use metamath_knife::Database;
 use metamath_knife::Formula;
 use metamath_knife::Label;
+use metamath_knife::StatementType;
 use metamath_knife::Symbol;
 use std::ops::Deref;
 use std::io::Write;
@@ -103,12 +105,13 @@ impl Db {
         Some((formula, hypotheses.into_boxed_slice()))
     }
 
-    pub fn parse_formula(&self, symbols: Vec<Symbol>) -> Result<Formula> {
+    pub fn parse_formula(&self, symbols: Vec<FormulaToken>) -> Result<Formula> {
         let database = self.intern.borrow();
         let grammar = database.grammar_result().clone();
         let nset = database.name_result();
+        let convert_to_provable = false;
         grammar
-            .parse_formula(&mut symbols.into_iter(), &grammar.typecodes(), nset)
+            .parse_formula(&mut symbols.into_iter(), &grammar.typecodes(), convert_to_provable, nset)
             .map_err(|diag| Error::msg(format!("{:?}", diag)))
     }
 
