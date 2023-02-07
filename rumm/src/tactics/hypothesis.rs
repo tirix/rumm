@@ -36,10 +36,10 @@ impl Tactics for Hypothesis {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
-        println!("-- ! --");
+        context.enter("!");
         for (label, hyp) in context.hypotheses().iter() {
             if context.goal().eq(hyp) {
-                println!("Matched hypothesis!");
+                context.exit("Matched hypothesis!");
                 return Ok(ProofStep::hyp(
                     *label,
                     context.goal().clone(),
@@ -48,11 +48,11 @@ impl Tactics for Hypothesis {
         }
         for (hyp, step) in context.subgoals().iter() {
             if context.goal().eq(hyp) {
-                println!("Matched subgoal!");
+                context.exit("Matched subgoal!");
                 return Ok(step.clone());
             }
         }
-        println!("Hypothesis failed");
+        context.exit("Hypothesis failed");
         Err(TacticsError::Error)
     }
 }

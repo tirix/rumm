@@ -22,6 +22,7 @@ pub struct Context {
     variables: Substitutions,
     label_variables: HashMap<String, Label>,
     tactics_variables: HashMap<String, Arc<dyn Tactics>>,
+    depth: usize,
 }
 
 impl Debug for Context {
@@ -37,7 +38,6 @@ impl<'a> Context {
         hypotheses: Hypotheses,
         tactics_definitions: TacticsDict,
     ) -> Self {
-        println!("Proving {}", DisplayPair(&goal, &db));
         let subgoals = vec![];
         Context {
             db,
@@ -48,7 +48,21 @@ impl<'a> Context {
             variables: Substitutions::default(),
             label_variables: HashMap::default(),
             tactics_variables: HashMap::default(),
+            depth: 0,
         }
+    }
+
+    pub fn message(&self, message: &str) {
+        println!("{:indent$}{message}", "", indent = self.depth);
+    }
+
+    pub fn enter(&self, message: &str) {
+        self.message(&format!("Proving {}", DisplayPair(&self.goal, &self.db)));
+        self.message(&format!(">> {message}"));
+    }
+
+    pub fn exit(&self, message: &str) {
+        self.message(&format!("<< {message}"));
     }
 
     pub fn get_tactics_definition(&self, name: String) -> Option<&TacticsDefinition> {
@@ -56,7 +70,6 @@ impl<'a> Context {
     }
 
     pub fn with_goal(&self, goal: Formula) -> Self {
-        println!("Proving {}", DisplayPair(&goal, &self.db));
         Self {
             db: self.db.clone(),
             goal,
@@ -66,6 +79,7 @@ impl<'a> Context {
             variables: self.variables.clone(),
             label_variables: self.label_variables.clone(),
             tactics_variables: self.tactics_variables.clone(),
+            depth: self.depth + 1,
         }
     }
 
@@ -81,6 +95,7 @@ impl<'a> Context {
             variables,
             label_variables: self.label_variables.clone(),
             tactics_variables: self.tactics_variables.clone(),
+            depth: self.depth + 1,
         }
     }
 
@@ -94,6 +109,7 @@ impl<'a> Context {
             variables: Substitutions::default(),
             label_variables: self.label_variables.clone(),
             tactics_variables: self.tactics_variables.clone(),
+            depth: self.depth + 1,
         }
     }
 
@@ -112,6 +128,9 @@ impl<'a> Context {
     }
     pub fn get_tactics_variable(&self, id: String) -> Option<Arc<dyn Tactics>> {
         self.tactics_variables.get(&id).map(|t| t.clone())
+    }
+    pub fn get_variable_label(&self, f: Formula) -> Option<Label> {
+        f.get_by_path(&[])
     }
 
     pub fn goal(&self) -> &Formula {
