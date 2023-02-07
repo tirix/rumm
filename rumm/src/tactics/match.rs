@@ -52,32 +52,36 @@ impl Tactics for Match {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
-        println!("-- Match --");
-        let model = match &self.target {
-            FormulaExpression::Formula(formula) => formula.substitute(context.variables()),
-            FormulaExpression::Goal => context.goal().clone(),
-            FormulaExpression::Statement(label) => context.get_theorem_formulas(label.evaluate(context)?)
-                .ok_or(TacticsError::Error)?.0, // unknown statement
-        };
-        println!("  Target {}", DisplayPair(&model, &context.db));
-//        println!("  {}", context.debug_formula(&model));
+        context.enter("Match");
+        let model = self.target.evaluate(&context)?.substitute(context.variables());
+        // match &self.target {
+        //     FormulaExpression::Formula(formula) => formula.substitute(context.variables()),
+        //     FormulaExpression::Goal => context.goal().clone(),
+        //     FormulaExpression::Statement(label) => context.get_theorem_formulas(label.evaluate(context)?)
+        //         .ok_or(TacticsError::Error)?.0, // unknown statement
+            
+        // };
+        context.message(&format!("Target {}", DisplayPair(&model, &context.db)));
+//        context.message(format!("{}", context.debug_formula(&model)));
         for m in self.matches.iter() {
-            println!("  Trying {}", DisplayPair(&m.0, &context.db));
-//            println!("  {}", context.debug_formula(&m.0));
+            let m2 = m.0.substitute(context.variables());
+            context.message(&format!("Trying {}", DisplayPair(&m2, &context.db)));
+//            context.message(format!("  {}", context.debug_formula(&m2))));
             let mut subst = Substitutions::new();
-            if let std::result::Result::Ok(_) = model.unify(&m.0, &mut subst) {
-                println!(
+            if let std::result::Result::Ok(_) = model.unify(&m2, &mut subst) {
+                context.message(&format!(
                     "Matched {} with {}",
                     DisplayPair(&model, &context.db),
-                    DisplayPair(&m.0, &context.db)
-                );
+                    DisplayPair(&m2, &context.db)
+                ));
                 let mut sub_context = context.with_variables(&subst);
                 if let Ok(step) = m.1.execute(&mut sub_context) {
+                    context.exit("Match successful");
                     return Ok(step);
                 }
             }
         }
-        println!("Match failed");
+        context.exit("-- Match failed --");
         Err(TacticsError::Error)
     }
 }

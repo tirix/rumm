@@ -17,6 +17,7 @@ pub enum FormulaExpression {
     Goal,
     Formula(Formula),
     Statement(StatementExpression),
+    Substitution(Formula, Formula, Box<FormulaExpression>),
 }
 
 impl Display for FormulaExpression {
@@ -26,8 +27,16 @@ impl Display for FormulaExpression {
             FormulaExpression::Formula(f) => f.format(fmt, db),
             FormulaExpression::Statement(l) => {
                 l.format(fmt, db)?;
-                fmt.write_str(".stmt")
+                fmt.write_str("statement")
             },
+            FormulaExpression::Substitution(what, with, in_expr) => {
+                fmt.write_str("s/")?;
+                what.format(fmt, db)?;
+                fmt.write_str("/")?;
+                with.format(fmt, db)?;
+                fmt.write_str("/")?;
+                in_expr.format(fmt, db)
+            }
         }
     }
 }
@@ -38,6 +47,14 @@ impl Parse for FormulaExpression {
             Some(Token::FormulaStart) => Ok(FormulaExpression::Formula(parser.parse_mm_formula()?)),
             Some(Token::GoalKeyword) => Ok(FormulaExpression::Goal),
             Some(Token::StatementKeyword) => Ok(FormulaExpression::Statement(StatementExpression::parse(parser)?)),
+            Some(Token::BeginSubstitutionKeyword) => {
+                let substitute_what = parser.parse_formula()?;
+                parser.parse_token(Token::SubstitutionKeyword)?;
+                let substitute_with = parser.parse_formula()?;
+                parser.parse_token(Token::SubstitutionKeyword)?;
+                let substitute_in = parser.parse_formula_expression()?;
+                Ok(FormulaExpression::Substitution(substitute_what, substitute_with, Box::new(substitute_in)))
+            },
             Some(token) => Err(Error::parse_error(
                 "A match target, either a formula, the 'goal keyword, or a label statement'.",
                 token,
@@ -55,6 +72,9 @@ impl FormulaExpression {
             FormulaExpression::Statement(e) => Ok(context.get_theorem_formulas(e.evaluate(context)?).ok_or(TacticsError::Error)?.0),
             FormulaExpression::Goal => Ok(context.goal().clone()),
             FormulaExpression::Formula(f) => Ok(f.clone()),
+            FormulaExpression::Substitution(what, with, in_expr) => {
+                Ok(in_expr.evaluate(context)?.substitute(context.variables()).replace(&what.substitute(context.variables()), &with.substitute(context.variables())))
+            }
         }
     }
 }

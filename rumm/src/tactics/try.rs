@@ -44,12 +44,14 @@ impl Tactics for Try {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
-        println!("-- Try --");
+        context.enter("Try");
         for t in &self.tactics {
             if let Ok(step) = t.execute(context) {
+                context.exit("Try Successful");
                 return Ok(step);
             }
         }
+        context.exit("-- Try Failed --");
         Err(TacticsError::Error)
     }
 }

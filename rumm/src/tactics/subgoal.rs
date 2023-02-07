@@ -52,13 +52,16 @@ impl Tactics for Subgoal {
     }
 
     fn execute(&self, mut context: &mut Context) -> TacticsResult {
-        println!("-- Subgoal --");
+        context.enter("Subgoal");
         let subgoal = self.subgoal.substitute(context.variables());
         let mut context1 = context.with_goal(subgoal.clone());
         if let Ok(step1) = self.tactics1.execute(&mut context1) {
             context.add_subgoal(subgoal, step1);
-            self.tactics2.execute(&mut context)
+            let res = self.tactics2.execute(&mut context);
+            context.exit("Subgoal complete");
+            res
         } else {
+            context.exit("-- Subgoal failed --");
             Err(TacticsError::Error)
         }
     }

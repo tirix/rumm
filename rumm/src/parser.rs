@@ -36,6 +36,12 @@ pub enum Token {
     #[token("statement")]
     StatementKeyword,
 
+    #[token("s/")]
+    BeginSubstitutionKeyword,
+
+    #[token("/")]
+    SubstitutionKeyword,
+
     #[token("with")]
     WithKeyword,
 

@@ -57,20 +57,21 @@ impl Tactics for Find {
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
         let target = self.formula.evaluate(context)?.substitute(context.variables());
-        println!("-- Find -- {}", DisplayPair(&target, &context.db));
+        context.enter(&format!("Find {}", DisplayPair(&target, &context.db)));
         for (label, formula) in context.clone().hypotheses().iter() {
-            println!("Trying {}", DisplayPair(formula, &context.db));
+            context.message(&format!("Trying {}", DisplayPair(formula, &context.db)));
             if let Ok(step) = self.check_match(context, &target, &*formula, |_subst| {
                 Ok(ProofStep::hyp(*label, formula.clone()))
             }) {
+                context.exit(&format!("Matched hypothesis {}", DisplayPair(formula, &context.db)));
                 return Ok(step);
             }
         }
         // TODO also go through subgoals
         for (label, formula, hyps) in context.clone().statements() {
             if let Ok(step) = self.check_match(context, &target, &formula, |subst| {
-                println!("Found match with {}", DisplayPair(&label, &context.db));
-                println!("  subst:{}", DisplayPair(subst, &context.db));
+                context.message(&format!("Found match with {}", DisplayPair(&label, &context.db)));
+                context.message(&format!("  subst:{}", DisplayPair(subst, &context.db)));
                 let mut substeps = vec![];
                 let mut failed = false;
                 for (_hyp_label, hyp_formula) in hyps.iter() {
@@ -83,9 +84,9 @@ impl Tactics for Find {
                     }
                 }
                 if failed { return Err(TacticsError::Error); };
-                println!("Unification success");
+                context.message("Unification success");
                 let subgoal = formula.substitute(&subst);
-                println!("  subgoal = {}", DisplayPair(&subgoal, &context.db));
+                context.message(&format!("  subgoal = {}", DisplayPair(&subgoal, &context.db)));
                 let mut subgoal_subst = Substitutions::new();
                 subgoal.unify(&formula, &mut subgoal_subst)?;
                 Ok(ProofStep::apply(
@@ -95,10 +96,11 @@ impl Tactics for Find {
                     Box::new(subgoal_subst.clone()),
                 ))
             }) {
+                context.exit("Find Successful!");
                 return Ok(step);
             }
         }
-        println!("No match found.");
+        context.exit("Find: No match found");
         Err(TacticsError::Error)
     }
 }

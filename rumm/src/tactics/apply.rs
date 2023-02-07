@@ -71,20 +71,22 @@ impl Tactics for Apply {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
-        println!("-- Apply --");
-        println!("  Proving {}", DisplayPair(context.goal(), &context.db));
-        context.db.debug_formula(context.goal());
-        //println!("  vars:{}", DisplayPair(context.variables(), &context.db));
+        context.enter(&format!("Apply {}", DisplayPair(&self.theorem, &context.db)));
+        //context.db.debug_formula(context.goal());
+        // println!("  vars:{}", DisplayPair(context.variables(), &context.db));
         let mut my_subst = Substitutions::default();
         for (l,f) in self.substitutions.iter() {
             my_subst.insert(*l, f.evaluate(context)?.substitute(context.variables()));
         }
 
         let theorem = self.theorem.evaluate(context)?;
-        println!("  Attempting apply {}", DisplayPair(&theorem, &context.db));
+        context.message(&format!("  Attempting apply {}", DisplayPair(&theorem, &context.db)));
         if let Some((theorem_formula, hyps)) = context.get_theorem_formulas(theorem) {
             let mut subst = Substitutions::new();
-            context.goal().unify(&theorem_formula, &mut subst)?;
+            if let Err(e) = context.goal().unify(&theorem_formula, &mut subst) {
+                context.exit("Apply statement doesn't match");
+                return Err(e.into());
+            }
             subst.extend(&my_subst);
             //println!("  subst:{}", DisplayPair(&subst, &context.db));
             if hyps.len() == self.subtactics.len() {
@@ -95,7 +97,7 @@ impl Tactics for Apply {
                     let mut sub_context = context.with_goal(sub_goal);
                     substeps.push(tactics.execute(&mut sub_context)?);
                 }
-                println!("Unification success");
+                context.exit("Apply Unification success");
                 Ok(ProofStep::apply(
                     theorem,
                     substeps.into_boxed_slice(),
@@ -103,11 +105,11 @@ impl Tactics for Apply {
                     Box::new(subst),
                 ))
             } else {
-                println!("Hyps don't match");
+                context.exit("Apply Hyps don't match");
                 Err(TacticsError::Error)
             }
         } else {
-            println!("Unknown theorem label");
+            context.exit("Unknown theorem label");
             Err(TacticsError::Error)
         }
     }

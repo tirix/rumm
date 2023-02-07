@@ -41,14 +41,16 @@ impl Tactics for UseScriptTactics {
     }
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
-        println!("-- Use {} --", self.name);
+        context.enter(&format!("Use {}", self.name));
         if let Some(tactics_definition) = context.clone().get_tactics_definition(self.name.clone())
         {
             let mut sub_context = context.without_variables();
             tactics_definition.add_variables(&mut sub_context, &self.parameters)?;
-            tactics_definition.execute(&mut sub_context)
+            let res = tactics_definition.execute(&mut sub_context);
+            context.exit(&format!("{} complete", self.name));
+            res
         } else {
-            println!("-- {} failed --", self.name);
+            context.exit(&format!("{} failed", self.name));
             Err(TacticsError::Error)
         }
     }

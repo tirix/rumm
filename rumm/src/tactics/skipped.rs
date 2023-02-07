@@ -34,8 +34,9 @@ impl Tactics for Skipped {
         "The \"to do\" tactics, leaving the goal unproven and filling in the Metamath proof with an incomplete, question mark proof.".to_string()
     }
 
-    fn execute(&self, _context: &mut Context) -> TacticsResult {
-        println!("Skipped!");
+    fn execute(&self, context: &mut Context) -> TacticsResult {
+        context.enter("Skip");
+        context.exit("Skipped!");
         Err(TacticsError::Error)
     }
 }
