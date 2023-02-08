@@ -16,6 +16,7 @@ use core::fmt::Formatter;
 pub enum FormulaExpression {
     Goal,
     Formula(Formula),
+    Variable(String),
     Statement(StatementExpression),
     Substitution(Formula, Formula, Box<FormulaExpression>),
 }
@@ -25,6 +26,7 @@ impl Display for FormulaExpression {
         match self {
             FormulaExpression::Goal => fmt.write_str("goal"),
             FormulaExpression::Formula(f) => f.format(fmt, db),
+            FormulaExpression::Variable(id) => fmt.write_str(id),
             FormulaExpression::Statement(l) => {
                 l.format(fmt, db)?;
                 fmt.write_str("statement")
@@ -47,6 +49,7 @@ impl Parse for FormulaExpression {
             Some(Token::FormulaStart) => Ok(FormulaExpression::Formula(parser.parse_mm_formula()?)),
             Some(Token::GoalKeyword) => Ok(FormulaExpression::Goal),
             Some(Token::StatementKeyword) => Ok(FormulaExpression::Statement(StatementExpression::parse(parser)?)),
+    		Some(Token::FormulaIdentifier(id)) => Ok(FormulaExpression::Variable(id)),
             Some(Token::BeginSubstitutionKeyword) => {
                 let substitute_what = parser.parse_formula()?;
                 parser.parse_token(Token::SubstitutionKeyword)?;
@@ -72,6 +75,7 @@ impl FormulaExpression {
             FormulaExpression::Statement(e) => Ok(context.get_theorem_formulas(e.evaluate(context)?).ok_or(TacticsError::Error)?.0),
             FormulaExpression::Goal => Ok(context.goal().clone()),
             FormulaExpression::Formula(f) => Ok(f.clone()),
+            FormulaExpression::Variable(id) => context.get_formula_variable(id.to_string()).ok_or(TacticsError::Error),
             FormulaExpression::Substitution(what, with, in_expr) => {
                 Ok(in_expr.evaluate(context)?.substitute(context.variables()).replace(&what.substitute(context.variables()), &with.substitute(context.variables())))
             }

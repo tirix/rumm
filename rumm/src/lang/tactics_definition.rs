@@ -103,6 +103,7 @@ impl TacticsDefinition {
             match (param, def) {
                 (Expression::Tactics(t), ParameterDefinition::Tactics(id)) => { context.add_tactics_variable(id.to_string(), t.evaluate(context)?); },
                 (Expression::Statement(l), ParameterDefinition::Theorem(id)) => { context.add_label_variable(id.to_string(), l.evaluate(context)?); },
+                (Expression::Formula(f), ParameterDefinition::Formula(id)) => { context.add_formula_variable(id.to_string(), f.evaluate(context)?); },
                 _ => Err(TacticsError::Error)?
             }
         }

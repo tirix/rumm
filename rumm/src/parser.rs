@@ -83,6 +83,9 @@ pub enum Token {
     #[regex("@[a-zA-Z0-9.\\-_]+", |lexer| String::from(lexer.slice()))]
     TacticsIdentifier(String),
 
+    #[regex("\\+[a-zA-Z0-9.\\-_]+", |lexer| String::from(lexer.slice()))]
+    FormulaIdentifier(String),
+
     #[regex("[a-zA-Z0-9.\\-_]+", |lexer| String::from(lexer.slice()))]
     Identifier(String),
 
@@ -357,6 +360,7 @@ impl<'a> Parser<'a> {
                 None => Err(Error::unexpected_end_of_file("A tactics name")),
             },
             Some(Token::CurlyBracketClose) => Ok(None),
+            Some(Token::FormulaStart) => Ok(Some(Expression::Formula(FormulaExpression::Formula(self.parse_mm_formula()?)))),
             Some(token) => Err(Error::parse_error(
                 "The tactics or the proof keywords",
                 token,

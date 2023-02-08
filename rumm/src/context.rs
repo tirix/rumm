@@ -22,6 +22,7 @@ pub struct Context {
     variables: Substitutions,
     label_variables: HashMap<String, Label>,
     tactics_variables: HashMap<String, Arc<dyn Tactics>>,
+    formula_variables: HashMap<String, Formula>,
     depth: usize,
 }
 
@@ -48,6 +49,7 @@ impl<'a> Context {
             variables: Substitutions::default(),
             label_variables: HashMap::default(),
             tactics_variables: HashMap::default(),
+            formula_variables: HashMap::default(),
             depth: 0,
         }
     }
@@ -79,6 +81,7 @@ impl<'a> Context {
             variables: self.variables.clone(),
             label_variables: self.label_variables.clone(),
             tactics_variables: self.tactics_variables.clone(),
+            formula_variables: self.formula_variables.clone(),
             depth: self.depth + 1,
         }
     }
@@ -95,6 +98,7 @@ impl<'a> Context {
             variables,
             label_variables: self.label_variables.clone(),
             tactics_variables: self.tactics_variables.clone(),
+            formula_variables: self.formula_variables.clone(),
             depth: self.depth + 1,
         }
     }
@@ -109,6 +113,7 @@ impl<'a> Context {
             variables: Substitutions::default(),
             label_variables: self.label_variables.clone(),
             tactics_variables: self.tactics_variables.clone(),
+            formula_variables: self.formula_variables.clone(),
             depth: self.depth + 1,
         }
     }
@@ -122,6 +127,9 @@ impl<'a> Context {
     pub fn add_tactics_variable(&mut self, id: String, tactics: Arc<dyn Tactics>) {
         self.tactics_variables.insert(id, tactics);
     }
+    pub fn add_formula_variable(&mut self, id: String, formula: Formula) {
+        self.formula_variables.insert(id, formula);
+    }
 
     pub fn get_label_variable(&self, id: String) -> Option<Label> {
         self.label_variables.get(&id).map(|l| *l)
@@ -129,6 +137,10 @@ impl<'a> Context {
     pub fn get_tactics_variable(&self, id: String) -> Option<Arc<dyn Tactics>> {
         self.tactics_variables.get(&id).map(|t| t.clone())
     }
+    pub fn get_formula_variable(&self, id: String) -> Option<Formula> {
+        self.formula_variables.get(&id).map(|f| f.clone())
+    }
+
     pub fn get_variable_label(&self, f: Formula) -> Option<Label> {
         f.get_by_path(&[])
     }

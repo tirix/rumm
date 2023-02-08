@@ -23,6 +23,18 @@ tactics deduction ()
 	{ apply ~simp-4l }
 	{ apply ~simp-5r }
 	{ apply ~simp-5l }
+
+	{ match goal
+		$ ( ph -> &C1 e. ( &C2 ^m &C3 ) ) $ { subgoal 
+			{ use deduction } 
+			$ ( ph -> &C1 : &C3 --> &C2 ) 
+			$ { apply ~mpbird 
+				{ use deduction }
+				{ apply ~elmapd { use existence } { use existence } with ~cV $ _V $ ~cW $ _V $ }
+				with ~wch $ &C1 : &C3 --> &C2 $ 
+			}
+		}
+	}
 }
 
 // First put the antecedent in a normal form then apply the given tactics
@@ -34,6 +46,8 @@ tactics normalize ( @T )
 	{ apply ~anasss { use normalize @T } }
 	$ ( ( ( ph /\ ( ps /\ ch ) ) /\ th ) -> et ) $
 	{ apply ~sylbir { apply ~anbi1i { apply ~anass } } { use normalize @T } with ~wps $ ( ( ( ph /\ ps ) /\ ch ) /\ th ) $ }
+	$ ( ( ph /\ ( ps /\ ch /\ th ) ) -> et ) $
+	{ apply ~3imp2 { apply ~exp41 { use normalize @T  } } }
 	$ ( ph -> ps ) $
 	@T
 }
@@ -45,6 +59,8 @@ tactics equality ()
 	{ match goal
 		$ ( ph -> ( ( ps /\ th ) <-> ( ch /\ ta ) ) ) $ { apply ~anbi12d { use equality } { use equality } }
 		$ ( ph -> ( ( ps \/ th ) <-> ( ch \/ ta ) ) ) $ { apply ~orbi12d { use equality } { use equality } }
+		$ ( ph -> ( ( ps /\ th /\ et ) <-> ( ch /\ ta /\ ze ) ) ) $ { apply ~3anbi123d { use equality } { use equality } { use equality } }
+		$ ( ph -> ( ( ps \/ th \/ et ) <-> ( ch \/ ta \/ ze ) ) ) $ { apply ~3orbi123d { use equality } { use equality } { use equality } }
 		$ ( ph -> ( A. x ps <-> A. x ch ) ) $ { apply ~albid { use equality } }
 		$ ( ph -> ( A. x e. A ps <-> A. x e. A ch ) ) $ { apply ~ralbidv { use equality } }
 		$ ( ph -> ( A. x e. A ps <-> A. x e. B ps ) ) $ { apply ~raleqdv { use equality } }
@@ -53,6 +69,9 @@ tactics equality ()
 		$ ( ph -> ( E. x e. A ps <-> E. x e. A ch ) ) $ { apply ~rexbidv { use equality } }
 		$ ( ph -> ( E. x e. A ps <-> E. x e. B ps ) ) $ { apply ~rexeqdv { use equality } }
 		$ ( ph -> ( E. x e. A ps <-> E. x e. B ch ) ) $ { apply ~rexeqbidv { use equality } { use equality } }
+		$ ( ph -> ( A = B <-> C = B ) ) $ { apply ~eqeq1d { use equality } }
+		$ ( ph -> ( A = B <-> A = C ) ) $ { apply ~eqeq2d { use equality } }
+		$ ( ph -> ( A = B <-> C = D ) ) $ { apply ~eqeq12d { use equality } { use equality } }
 		$ ( ph -> ( A e. B <-> C e. B ) ) $ { apply ~eleq1d { use equality } }
 		$ ( ph -> ( A e. B <-> A e. C ) ) $ { apply ~eleq2d { use equality } }
 		$ ( ph -> ( A e. B <-> C e. D ) ) $ { apply ~eleq12d { use equality } { use equality } }
@@ -72,6 +91,13 @@ tactics equality ()
 		$ ( ph -> { x e. A | ps } = { x e. A | ch } ) $ { apply ~rabbidv { use equality } }
 		$ ( ph -> { <. x , y >. | ps } = { <. x , y >. | ch } ) $ { apply ~opabbidv { use equality } }
 
+		$ ( ph -> ( F : A --> B <-> G : A --> B ) ) $ { apply ~feq1d { use equality } }
+		$ ( ph -> ( F : A --> C <-> F : B --> C ) ) $ { apply ~feq2d { use equality } }
+		$ ( ph -> ( F : X --> A <-> F : X --> B ) ) $ { apply ~feq3d { use equality } }
+		$ ( ph -> ( F : A --> C <-> G : B --> C ) ) $ { apply ~feq12d { use equality } { use equality } }
+		$ ( ph -> ( F : A --> B <-> F : C --> D ) ) $ { apply ~feq23d { use equality } { use equality } }
+		$ ( ph -> ( F : A --> C <-> G : B --> D ) ) $ { apply ~feq123d { use equality } { use equality } { use equality } }
+
 		$ ( ph -> ( x e. A |-> B ) = ( x e. C |-> B ) ) $ { apply ~mpteq1d { use equality } }
 		$ ( ph -> ( x e. A |-> B ) = ( x e. A |-> C ) ) $ { apply ~mpteq2dv { use equality } }
 		$ ( ph -> ( x e. A |-> B ) = ( x e. C |-> D ) ) $ { apply ~mpteq12dv { use equality } { use equality } }
@@ -84,14 +110,19 @@ tactics equality ()
 		$ ( ph -> if ( &W1 , &C1 , &C2 ) = if ( &W2 , &C1 , &C3 ) ) $ { apply ~ifbieq2d { use equality }  }
 		$ ( ph -> if ( &W1 , &C1 , &C2 ) = if ( &W2 , &C3 , &C4 ) ) $ { apply ~ifbieq12d { use equality }  }
 
+		$ ( ( ( ph /\ X = Y ) /\ ps ) -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
 		$ ( ( ph /\ X = Y ) -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
+		$ ( ( X = Y /\ ph ) -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
 		$ ( X = Y -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
 	}
 }
 
-tactics existence ()
+tactics existence ( +V +W )
 { try
 	{ apply ~elex }
+	{ apply ~elexd { use deduction } }
+	{ apply ~ovex }
+	{ apply ~ovexd }
 	{ match goal 
 		$ ( &W1 -> { <. &S1 , &S2 >. | ( ( &S1 e. &C1 /\ &S2 e. &C2 ) /\ &W2 ) } e. _V ) $
 		{ apply ~opabex2
@@ -102,6 +133,30 @@ tactics existence ()
 			with
 			~cA $ &C1 $
 			~cB $ &C2 $
+			~cV $ _V $
+			~cW $ _V $
+		}
+		$ ( &W1 -> { <. &S1 , &S2 >. | ( &S1 e. &C1 /\ &S2 e. &C2 /\ &W2 ) } e. _V ) $
+		{ apply ~opabex2
+			{ use existence }
+			{ use existence }
+			{ use normalize { use deduction } }
+			{ use normalize { use deduction } }
+			with
+			~cA $ &C1 $
+			~cB $ &C2 $
+			~cV $ _V $
+			~cW $ _V $
+		}
+		$ ( &W1 -> { <. &S1 , &S2 >. | &W2 } e. _V ) $
+		{ apply ~opabex2
+			{ use existence }
+			{ use existence }
+			{ use normalize { use deduction } }
+			{ use normalize { use deduction } }
+			with
+			~cA +V
+			~cB +W
 			~cV $ _V $
 			~cW $ _V $
 		}
@@ -121,7 +176,7 @@ tactics existence ()
 	}
 }
 
-tactics definition ( @T1 @T2 )
+tactics definition ( @T1 @T2 @T3 )
 { match goal
 	$ ( &W1 -> ( &C1 ` &C2 ) = &C3 ) $
 	{ find
@@ -140,7 +195,25 @@ tactics definition ( @T1 @T2 )
 		}
 	}
 	$ ( &W1 -> ( &C1 &C2 &C3 ) = &C4 ) $
-	?
+	{
+		find
+		!
+		$ &C2 = ( &S1 e. &C5 , &S2 e. &C6 |-> &C7 ) $
+		{ apply ~ovmpt2d
+			{ apply ~a1i ! }
+			{ use normalize { use equality } }
+			@T1
+			@T2
+			@T3
+			with
+			~vx $ &S1 $
+			~vy $ &S2 $
+			~cC $ &C5 $
+			~cD $ &C6 $
+			~cR $ &C7 $
+			~cX $ _V $
+		}
+	}
 	$ ( &W1 -> ( &C1 &C2 &C3 <-> &W2 ) ) $
 	?
 }
@@ -203,3 +276,6 @@ proof ~ellimc
 	}
 	with ~wch $ C e. { y | ( z e. ( A u. { B } ) |-> if ( z = B , y , ( F ` z ) ) ) e. ( ( J CnP K ) ` B ) } $
 }
+
+proof ~ajfval
+{ apply ~syl5eq ! { use definition { use deduction } { use deduction } { use existence $ ( Y ^m X ) $ $ ( X ^m Y ) $ } } with ~cB $ ( U adj W ) $ }
