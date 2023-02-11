@@ -1,4 +1,4 @@
-use crate::lang::TacticsExpression;
+use crate::lang::{TacticsExpression, FormulaExpression};
 use crate::context::Context;
 use crate::error::Result;
 use crate::lang::{Db, Display};
@@ -7,21 +7,20 @@ use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
 use core::fmt::Formatter;
-use metamath_knife::formula::Formula;
 
 /// A tactics which first solves subgoal,
 /// then provides that subgoal as part of the proven statements for the subsequent part of the proof.
 ///
 pub struct Subgoal {
     tactics1: TacticsExpression,
-    subgoal: Formula,
+    subgoal: FormulaExpression,
     tactics2: TacticsExpression,
 }
 
 impl Parse for Subgoal {
     fn parse(parser: &mut Parser) -> Result<Self> {
         let tactics1 = parser.parse_tactics()?;
-        let subgoal = parser.parse_formula()?;
+        let subgoal = parser.parse_formula_expression()?;
         let tactics2 = parser.parse_tactics()?;
         parser.parse_curly_bracket_close()?;
         Ok(Subgoal {
@@ -53,7 +52,7 @@ impl Tactics for Subgoal {
 
     fn execute(&self, mut context: &mut Context) -> TacticsResult {
         context.enter("Subgoal");
-        let subgoal = self.subgoal.substitute(context.variables());
+        let subgoal = self.subgoal.evaluate(context)?.substitute(context.variables());
         let mut context1 = context.with_goal(subgoal.clone());
         if let Ok(step1) = self.tactics1.execute(&mut context1) {
             context.add_subgoal(subgoal, step1);

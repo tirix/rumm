@@ -2,6 +2,7 @@
 load "examples/examples.mm"
 
 // Fetch hypotheses from the hypothesis or the 'antecedent' part of the goal
+// This is useful to prove theorems written in the 'deduction' form.
 tactics deduction ()
 { try
 	!
@@ -52,9 +53,16 @@ tactics normalize ( @T )
 	@T
 }
 
+// Recursively reduce equality and biconditionals
+// Given a formula containing `X`, this tactics should be able to prove equivalence or equality 
+// for the same formula where `X` has been substituted by `Y`, as long as `X = Y` can be derived from the antecedent
+// or hypotheses.  It also handles multiple such substitutions, as well as `B = ( Base ` G )` type hypotheses.
 tactics equality ()
 { try
 	{ use deduction }
+	{ apply ~biid }
+	{ apply ~eqid }
+	{ apply ~biidd }
 	{ apply ~eqidd }
 	{ match goal
 		$ ( ph -> ( ( ps /\ th ) <-> ( ch /\ ta ) ) ) $ { apply ~anbi12d { use equality } { use equality } }
@@ -102,6 +110,13 @@ tactics equality ()
 		$ ( ph -> ( x e. A |-> B ) = ( x e. A |-> C ) ) $ { apply ~mpteq2dv { use equality } }
 		$ ( ph -> ( x e. A |-> B ) = ( x e. C |-> D ) ) $ { apply ~mpteq12dv { use equality } { use equality } }
 
+		$ ( ph -> ( x e. A , y e. B |-> C ) = ( x e. A , y e. B |-> D ) ) $ { apply ~mpt2eq3dv { use equality } }
+		$ ( ph -> ( x e. A , y e. B |-> C ) = ( x e. D , y e. E |-> F ) ) $ { apply ~mpt2eq123dv { use equality } { use equality } { use equality } }
+
+		$ ( ph -> ( iota_ x e. A ps ) = ( iota_ x e. B ps ) ) $ { apply ~riotaeqdv { use equality } }
+		$ ( ph -> ( iota_ x e. A ps ) = ( iota_ x e. A ch ) ) $ { apply ~riotabidv { use equality } }
+		$ ( ph -> ( iota_ x e. A ps ) = ( iota_ x e. B ch ) ) $ { apply ~riotaeqbidv { use equality } { use equality } }
+
 		$ ( ph -> if ( &W1 , &C1 , &C2 ) = if ( &W1 , &C3 , &C2 ) ) $ { apply ~ifeq1d { use equality }  }
 		$ ( ph -> if ( &W1 , &C1 , &C2 ) = if ( &W1 , &C1 , &C3 ) ) $ { apply ~ifeq2d { use equality }  }
 		$ ( ph -> if ( &W1 , &C1 , &C2 ) = if ( &W1 , &C3 , &C4 ) ) $ { apply ~ifeq12d { use equality }  }
@@ -117,13 +132,35 @@ tactics equality ()
 	}
 }
 
+// Prove "existence", a.k.a. "sethood", i.e. wff matching `( ph -> A e. _V )`
+// Two sets are optionally provided in case intermediate sethood has to be proven.
 tactics existence ( +V +W )
 { try
+	!
 	{ apply ~elex }
-	{ apply ~elexd { use deduction } }
+	{ apply ~elexd { use deduction } with ~cV +V }
 	{ apply ~ovex }
 	{ apply ~ovexd }
+	{ apply ~fvex }
+	{ apply ~fvexd }
 	{ match goal 
+		$ ( &W1 -> &C1 e. _V ) $
+		{ findhyp
+			$ ( &W1 -> &C1 e. &C2 ) $
+			{ apply ~elexd ! with ~cV $ &C2 $ }
+		}
+		$ ( &W1 -> ( &S1 e. &C1 , &S2 e. &C2 |-> &C3 ) e. _V ) $ 
+		{ apply ~syl2anc { use existence } { use existence } { apply ~mpt2exga } with ~wps $ &C1 e. _V $ ~wch $ &C2 e. _V $ }
+		// { subgoal { use existence } $ ( &W1 -> &C1 e. _V ) $
+		//	{ subgoal { use existence } $ ( &W1 -> &C2 e. _V ) $
+		//	//	{ use deduction_apply ~mpt2exga { apply ~mpt2exga } }  // Here, deduction_apply did not work due to &C4 and &C5 not being identified correctly
+		//		{ subgoal
+		//			{ apply ~mpt2exga }
+		//			$ ( ( &C1 e. _V /\ &C2 e. _V ) -> ( &S1 e. &C1 , &S2 e. &C2 |-> &C3 ) e. _V ) $
+		//			{ apply ~syl2anc ! ! ! with ~wps $ &C1 e. _V $ ~wch $ &C2 e. _V $ }
+		//		}
+		//	}
+		// }
 		$ ( &W1 -> { <. &S1 , &S2 >. | ( ( &S1 e. &C1 /\ &S2 e. &C2 ) /\ &W2 ) } e. _V ) $
 		{ apply ~opabex2
 			{ use existence }
@@ -160,9 +197,10 @@ tactics existence ( +V +W )
 			~cV $ _V $
 			~cW $ _V $
 		}
+		$ ( &W1 -> ( iota_ &S1 e. &C1 &W2 ) e. _V ) $
+		{ subgoal { apply ~riotaex } $ ( iota_ &S1 e. &C1 &W2 ) e. _V $ { apply ~a1i ! } }
 		$ ( ph -> &C1 e. _V ) $
-		{ find
-			!
+		{ findhyp
 			$ &C1 = ( &C2 ` &C3 ) $
 			{ apply ~a1i 
 				{ apply ~eqeltri
@@ -176,50 +214,103 @@ tactics existence ( +V +W )
 	}
 }
 
-tactics definition ( @T1 @T2 @T3 )
+// 
+tactics closure ( @T )
 { match goal
+	$ ( &W1 -> ( iota_ &S1 e. &C1 &W2 ) e. &C1 ) $
+	{ subgoal
+		{ apply ~riotacl }
+		$ ( E! &S1 e. &C1 &W2 -> ( iota_ &S1 e. &C1 &W2 ) e. &C1 ) $
+		@T
+	}
+}
+
+// Develops the definition for common construct.
+// The optional tactics provided are used to prove subgoals.
+tactics definition ( @T1 @T2 @T3 )
+{ try { use deduction } { match goal
 	$ ( &W1 -> ( &C1 ` &C2 ) = &C3 ) $
-	{ find
-		!
-		$ &C1 = ( &S1 e. &C4 |-> &C5 ) $
-		{ apply ~fvmptd
-			{ apply ~a1i ! }
-			{ use equality }
-			@T1
-			@T2
-			with
-			~vx $ &S1 $
-			~cB $ &C5 $
-			~cD $ &C4 $
-			~cV $ _V $
+	{ try
+		{ find
+			!
+			$ &C1 = ( &S1 e. &C4 |-> &C5 ) $
+			{ apply ~fvmptd
+				{ apply ~a1i ! }
+				{ use equality }
+				@T1
+				@T2
+				with
+				~vx $ &S1 $
+				~cB $ &C5 $
+				~cD $ &C4 $
+				~cV $ _V $
+			}
+		}
+		{ find
+			!
+			$ ( &W1 -> &C1 = ( &S1 e. &C4 |-> &C3 ) ) $
+			{ apply ~fvmptd
+				!
+				{ use equality }
+				@T1
+				@T2
+				with
+				~vx $ &S1 $
+				~cB $ &C5 $
+				~cD $ &C4 $
+				~cV $ _V $
+			}
 		}
 	}
 	$ ( &W1 -> ( &C1 &C2 &C3 ) = &C4 ) $
-	{
-		find
-		!
-		$ &C2 = ( &S1 e. &C5 , &S2 e. &C6 |-> &C7 ) $
-		{ apply ~ovmpt2d
-			{ apply ~a1i ! }
-			{ use normalize { use equality } }
-			@T1
-			@T2
-			@T3
-			with
-			~vx $ &S1 $
-			~vy $ &S2 $
-			~cC $ &C5 $
-			~cD $ &C6 $
-			~cR $ &C7 $
-			~cX $ _V $
+	{ try
+		{ find
+			!
+			$ &C2 = ( &S1 e. &C5 , &S2 e. &C6 |-> &C7 ) $
+			{ apply ~ovmpt2d
+				{ apply ~a1i ! }
+				{ use normalize { use equality } }
+				@T1
+				@T2
+				@T3
+				with
+				~vx $ &S1 $
+				~vy $ &S2 $
+				~cC $ &C5 $
+				~cD $ &C6 $
+				~cR $ &C7 $
+				~cX $ _V $
+			}
+		}
+		{ find
+			!
+			$ ( &W1 -> &C2 = ( &S1 e. &C5 , &S2 e. &C6 |-> &C7 ) ) $
+			{ apply ~ovmpt2d
+				!
+				{ use normalize { use equality } }
+				@T1
+				@T2
+				@T3
+				with
+				~vx $ &S1 $
+				~vy $ &S2 $
+				~cC $ &C5 $
+				~cD $ &C6 $
+				~cR $ &C7 $
+				~cX $ _V $
+			}
 		}
 	}
 	$ ( &W1 -> ( &C1 &C2 &C3 <-> &W2 ) ) $
 	?
-}
+} }
 
+// Apply the `≈THM` theorem provided in parameter while in "deduction" mode.
+// Many theorems are stated in "inference" form (-i) or "closed" form (-g)
 tactics deduction_apply ( ≈THM @T )
-{ match statement ≈THM
+{ match statement ≈THM // Warning, matching here is matching at meta level (theorem statement level), more substitutions shall be extracted!
+	$ ( ( &W1 /\ &W2 ) -> &W3 ) $
+	{ match goal $ ( &W4 -> &W3 ) $ { apply ~syl2anc { use deduction } { use dedution } @T with ~wps $ &W1 $ ~wch $ &W2 $ } }
 	$ ( &W1 -> ( &W2 /\ &W3 ) ) $
 	{ match goal 
 		$ ( &W4 -> &W2 ) $ { apply ~syl { use deduction } { apply ~simpld @T with ~wch $ &W3 $ } with ~wps $ &W1 $ }
@@ -250,6 +341,9 @@ tactics reals_closure ()
 	}
 }
 
+// --- Theorems ---
+// Below are proofs of theorems from `set.mm` to demonstrate how proofs can be written.
+
 // Prove an example theorem
 proof ~rummex1
 { use reals_closure }
@@ -279,3 +373,19 @@ proof ~ellimc
 
 proof ~ajfval
 { apply ~syl5eq ! { use definition { use deduction } { use deduction } { use existence $ ( Y ^m X ) $ $ ( X ^m Y ) $ } } with ~cB $ ( U adj W ) $ }
+
+proof ~ismidb
+{ subgoal
+	{ use definition { use existence } { use existence } }
+	$ ( ph -> ( midG ` G ) = ( a e. P , b e. P |-> ( iota_ m e. P b = ( ( S ` m ) ` a ) ) ) ) $
+	{ subgoal
+		{ use definition { use existence } { use existence } { use existence } }
+		$ ( ph -> ( A ( midG ` G ) B ) = ( iota_ m e. P B = ( ( S ` m ) ` A ) ) ) $
+		{ apply ~bitr4d
+			//	{ use deduction_apply ~riota2 { use equality } }  // Here, deduction_apply did not work due to &W4 and &W5 not being identified correctly
+			{ apply ~syl2anc ! { apply ~mideu ! ! ! { apply ~eqid } ! ! ! ! ! with ~cL $ ( LineG ` G ) $ ~cG $ G $ ~cI $ I $ ~c.mi $ .- $ } { apply ~riota2 { use equality } } with ~wps $ M e. P $ ~wch $ E! m e. P B = ( ( S ` m ) ` A ) $ }
+			{ apply ~eqeq1d { use definition } }
+			with ~wch $ ( iota_ m e. P B = ( ( S ` m ) ` A ) ) = M $
+		}
+	}
+}

@@ -88,7 +88,7 @@ impl Tactics for Apply {
                 return Err(e.into());
             }
             subst.extend(&my_subst);
-            //println!("  subst:{}", DisplayPair(&subst, &context.db));
+            // context.message(&format!("  subst:{}", DisplayPair(&subst, &context.db)));
             if hyps.len() == self.subtactics.len() {
                 let mut substeps = vec![];
                 // TODO check count!
@@ -106,7 +106,7 @@ impl Tactics for Apply {
                 ))
             } else {
                 context.exit("Apply Hyps don't match");
-                Err(TacticsError::Error)
+                Err(TacticsError::CriticalError)
             }
         } else {
             context.exit("Unknown theorem label");

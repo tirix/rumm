@@ -257,6 +257,7 @@ impl<'a> Parser<'a> {
                     "try" => TacticsExpression::cst(Try::parse(self)?.into_arc()),
                     "match" => TacticsExpression::cst(Match::parse(self)?.into_arc()),
                     "find" => TacticsExpression::cst(Find::parse(self)?.into_arc()),
+                    "findhyp" => TacticsExpression::cst(FindHyp::parse(self)?.into_arc()),
                     _ => Err(Error::msg(format!("Unknown tactics name: {}", name))),
                 },
                 Some(token) => Err(Error::parse_error("A tactics name", token)),
@@ -343,6 +344,7 @@ impl<'a> Parser<'a> {
         match self.next_token() {
             Some(Token::TheoremIdentifier(id)) => Ok(Some(Expression::Statement(StatementExpression::Variable(id)))),
             Some(Token::TacticsIdentifier(id)) => Ok(Some(Expression::Tactics(TacticsExpression::Variable(id)))),
+            Some(Token::FormulaIdentifier(id)) => Ok(Some(Expression::Formula(FormulaExpression::Variable(id)))),
             Some(Token::TheoremLabel(name)) => Ok(Some(Expression::Statement(StatementExpression::Constant(self.db.get_theorem_label(name[1..].to_string())?)))),
             Some(Token::TodoKeyword) => Expression::tactics(Skipped {}.into_arc()),
             Some(Token::HypoKeyword) => Expression::tactics(Hypothesis {}.into_arc()),
@@ -354,6 +356,7 @@ impl<'a> Parser<'a> {
                     "try" => Expression::tactics(Try::parse(self)?.into_arc()),
                     "match" => Expression::tactics(Match::parse(self)?.into_arc()),
                     "find" => Expression::tactics(Find::parse(self)?.into_arc()),
+                    "findhyp" => Expression::tactics(FindHyp::parse(self)?.into_arc()),
                     _ => Err(Error::msg(format!("Unknown tactics name: {}", name))),
                 },
                 Some(token) => Err(Error::parse_error("A tactics name", token)),
