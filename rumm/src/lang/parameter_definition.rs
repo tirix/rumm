@@ -5,6 +5,7 @@ use crate::parser::{Parse, Parser, Token};
 pub enum ParameterDefinition {
     Tactics(String),
     Theorem(String),
+    Formula(String),
 }
 
 impl Parse for ParameterDefinition {
@@ -12,6 +13,7 @@ impl Parse for ParameterDefinition {
         match parser.next_token() {
             Some(Token::TacticsIdentifier(id)) => Ok(ParameterDefinition::Tactics(id)),
             Some(Token::TheoremIdentifier(id)) => Ok(ParameterDefinition::Theorem(id)),
+            Some(Token::FormulaIdentifier(id)) => Ok(ParameterDefinition::Formula(id)),
             Some(token) => Err(Error::parse_error("String constant", token)),
             None => Err(Error::unexpected_end_of_file("String constant")),
         }
