@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::parser::{Parse, Parser, Token};
 
 #[derive(Debug)]
@@ -14,8 +14,8 @@ impl Parse for ParameterDefinition {
             Some(Token::TacticsIdentifier(id)) => Ok(ParameterDefinition::Tactics(id)),
             Some(Token::TheoremIdentifier(id)) => Ok(ParameterDefinition::Theorem(id)),
             Some(Token::FormulaIdentifier(id)) => Ok(ParameterDefinition::Formula(id)),
-            Some(token) => Err(Error::parse_error("String constant", token)),
-            None => Err(Error::unexpected_end_of_file("String constant")),
+            Some(token) => Err(parser.parse_error("String constant", token).into()),
+            None => Err(parser.unexpected_end_of_file("String constant").into()),
         }
     }
 }

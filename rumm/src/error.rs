@@ -1,48 +1,41 @@
 use crate::parser::Token;
-use metamath_knife::{diag::Diagnostic, statement::StatementAddress, formula::UnificationError};
+use logos::Span;
+use metamath_knife::{diag::{Diagnostic, StmtParseError}, statement::StatementAddress, formula::UnificationError};
+
+
 
 // Check if crate "thiserror" would help here?
 
-pub type Result<T = ()> = std::result::Result<T, Error>;
+pub type Result<T = ()> = anyhow::Result<T, anyhow::Error>;
 
 #[derive(Debug)]
+pub struct Location {
+    pub filename: String,
+    pub span: Span,
+}
+
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("I/O Error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Metamath Error {}", Error::format_mm_err(.0))]
     DBError(Vec<(StatementAddress, Diagnostic)>),
-    ParseError { expected: String, found: Token },
+    #[error("Metamath Parse Error ")]
+    DBParseError(StmtParseError),
+    #[error("Lexer Error")]
     MMLexerError,
-    MessageError(String),
-    UnexpectedEndOfFile { expected: String },
+    #[error("Parse Error: expected {expected}, found {found}")]
+    ParseError { location: Location, expected: String, found: Token },
+    #[error("Unification Failed")]
+    UnificationError(UnificationError),
+    #[error("Unexpected end of file: expected {expected}")]
+    UnexpectedEndOfFile { location: Location, expected: String },
+    #[error("Unknown label {label}")]
+    UnknownLabel{ location: Location, label: String },
 }
 
 impl Error {
-    pub fn parse_error(expected: &str, found: Token) -> Self {
-        Error::ParseError {
-            expected: expected.to_string(),
-            found,
-        }
-    }
-
-    pub fn unexpected_end_of_file(expected: &str) -> Self {
-        Error::UnexpectedEndOfFile {
-            expected: expected.to_string(),
-        }
-    }
-
-    pub fn msg<T: ToString>(msg: T) -> Self {
-        Error::MessageError(msg.to_string())
+    pub fn format_mm_err(data: &Vec<(StatementAddress, Diagnostic)>) -> String {
+        data.iter().fold(String::new(), |s, (saddr, diag)| format!("{}\n{:?}:{:?}", s, saddr, diag))
     }
 }
-
-impl From<std::io::Error> for Error {
-    fn from(error: std::io::Error) -> Self {
-        Error::msg(format!("io error: {}", error))
-    }
-}
-
-impl From<UnificationError> for Error {
-    fn from(_: UnificationError) -> Self {
-        Error::msg(format!("Unification failed"))
-    }
-}
-
-pub struct Backtrace {}

@@ -1,6 +1,11 @@
+$( Include set.mm $)
 $[ ../../set.mm/set.mm $]
 
-$( Additional meta-variables required for the RMM script $)
+$( Declare additional meta-variables required for the RMM script.
+   Scripting requires "new" variables in the sense that they should be 
+   guaranteed to be distinct from any existing variable.
+   metamath-knife currently does not support metavariables, 
+   so these are simply manually declared. $)
 $v &W1 &W2 &W3 &W4 &C1 &C2 &C3 &C4 &C5 &C6 &C7 &S1 &S2 $.
 ww1 $f wff &W1 $.
 ww2 $f wff &W2 $.

@@ -31,13 +31,6 @@ impl Parse for Script {
     }
 }
 
-impl std::str::FromStr for Script {
-    type Err = crate::Error;
-    fn from_str(str: &str) -> Result<Self> {
-        Script::parse(&mut Parser::new(str))
-    }
-}
-
 impl Script {
     pub fn new(
         db: Db,
@@ -49,6 +42,10 @@ impl Script {
             tactics_definitions: TacticsDict::from(tactics_list),
             proof_definitions,
         }
+    }
+
+    pub fn from_str(filename: String, str: &str) -> Result<Self> {
+        Script::parse(&mut Parser::from_str(filename, str))
     }
 
     pub fn execute(&mut self) -> Result {

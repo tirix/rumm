@@ -1,8 +1,9 @@
 use crate::lang::TacticsExpression;
-use crate::error::{Error, Result};
+use crate::error::{Error, Result, Location};
 use crate::lang::*;
 use crate::script::Script;
 use crate::tactics::*;
+use anyhow::{bail, Context};
 use logos::{Lexer, Logos};
 use metamath_knife::{Formula, Span};
 use metamath_knife::Label;
@@ -26,6 +27,9 @@ pub enum Token {
 
     #[token("import")]
     ImportKeyword,
+
+    #[token("include")]
+    IncludeKeyword,
 
     #[token("load")]
     LoadKeyword,
@@ -129,6 +133,7 @@ impl Display for Token {
 }
 
 pub struct Parser<'a> {
+    filename: String,
     pub lexer: Lexer<'a, Token>,
     last_description: Option<String>,
     db: Db,
@@ -136,8 +141,14 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(str: &'a str) -> Self {
+    // pub fn from_file(filename: &'a str) -> Result<Self> {
+    //     let data = read_to_string(filename).with_context(|| format!("could not read file `{}`", filename))?;
+    //     Ok(Self::from_str(filename.to_string(), &data))
+    // }
+
+    pub fn from_str(filename: String, str: &'a str) -> Self {
         Parser {
+            filename,
             lexer: Token::lexer(str),
             last_description: None,
             db: Db::default(),
@@ -165,6 +176,11 @@ impl<'a> Parser<'a> {
 
     pub fn get_theorem_label(&self, name: String) -> Result<Label> {
         self.db.get_theorem_label(name[1..].to_string())
+            .ok_or(Error::UnknownLabel{
+                location: self.location(), 
+                label: name,
+            }.into()
+        )
     }
 
     pub fn parse_token(&mut self, expected: Token) -> Result {
@@ -173,13 +189,10 @@ impl<'a> Parser<'a> {
                 if found == expected {
                     Ok(())
                 } else {
-                    Err(Error::ParseError {
-                        expected: expected.to_string(),
-                        found,
-                    })
+                    Err(self.parse_error(&expected.to_string(), found))
                 }
             }
-            None => Err(Error::unexpected_end_of_file("Identifier")),
+            None => Err(self.unexpected_end_of_file("Identifier")),
         }
     }
 
@@ -190,33 +203,33 @@ impl<'a> Parser<'a> {
     pub fn parse_string_constant(&mut self) -> Result<String> {
         match self.next_token() {
             Some(Token::StringConstant(string)) => Ok(string),
-            Some(token) => Err(Error::parse_error("String constant", token)),
-            None => Err(Error::unexpected_end_of_file("String constant")),
+            Some(token) => Err(self.parse_error("String constant", token)),
+            None => Err(self.unexpected_end_of_file("String constant")),
         }
     }
 
     pub fn parse_identifier(&mut self) -> Result<String> {
         match self.next_token() {
             Some(Token::Identifier(name)) => Ok(name),
-            Some(token) => Err(Error::parse_error("Identifier", token)),
-            None => Err(Error::unexpected_end_of_file("Identifier")),
+            Some(token) => Err(self.parse_error("Identifier", token)),
+            None => Err(self.unexpected_end_of_file("Identifier")),
         }
     }
 
     pub fn parse_optional_statement(&mut self) -> Result<Option<Label>> {
         match self.next_token() {
             Some(Token::CurlyBracketClose) => Ok(None),
-            Some(Token::TheoremLabel(name)) => Ok(Some(self.db.get_theorem_label(name[1..].to_string())?)),
-            Some(token) => Err(Error::parse_error("A Theorem Label", token)),
-            None => Err(Error::unexpected_end_of_file("A Theorem Label")),
+            Some(Token::TheoremLabel(name)) => Ok(Some(self.get_theorem_label(name)?)),
+            Some(token) => Err(self.parse_error("A Theorem Label", token)),
+            None => Err(self.unexpected_end_of_file("A Theorem Label")),
         }
     }
 
     pub fn parse_theorem_label(&mut self) -> Result<Label> {
         match self.next_token() {
-            Some(Token::TheoremLabel(name)) => self.db.get_theorem_label(name[1..].to_string()),
-            Some(token) => Err(Error::parse_error("A Theorem Label", token)),
-            None => Err(Error::unexpected_end_of_file("A Theorem Label")),
+            Some(Token::TheoremLabel(name)) => self.get_theorem_label(name),
+            Some(token) => Err(self.parse_error("A Theorem Label", token)),
+            None => Err(self.unexpected_end_of_file("A Theorem Label")),
         }
     }
 
@@ -224,18 +237,20 @@ impl<'a> Parser<'a> {
         let definition_result = ParameterDefinition::parse(self);
         match definition_result {
             Ok(parameter_definition) => Ok(Some(parameter_definition)),
-            Err(Error::ParseError {
-                expected: _,
-                found: Token::ParensClose,
-            }) => Ok(None),
-            Err(error) => Err(error),
+            Err(error) => {
+                let e = error.downcast::<Error>()?;
+                match e {
+                    Error::ParseError { found: Token::ParensClose, .. } => Ok(None),
+                    _ => Err(e.into()),
+                }
+            }
         }
     }
 
     pub fn parse_tactics(&mut self) -> Result<TacticsExpression> {
         match self.parse_optional_tactics() {
             Ok(OptionalTactics::Some(tactics)) => Ok(tactics),
-            Ok(OptionalTactics::None) | Ok(OptionalTactics::With) => Err(Error::parse_error(
+            Ok(OptionalTactics::None) | Ok(OptionalTactics::With) => Err(self.parse_error(
                 "A tactics, within braces '{ ... }', or the '?' unfinished tactics.",
                 Token::CurlyBracketClose,
             )),
@@ -258,17 +273,17 @@ impl<'a> Parser<'a> {
                     "match" => TacticsExpression::cst(Match::parse(self)?.into_arc()),
                     "find" => TacticsExpression::cst(Find::parse(self)?.into_arc()),
                     "findhyp" => TacticsExpression::cst(FindHyp::parse(self)?.into_arc()),
-                    _ => Err(Error::msg(format!("Unknown tactics name: {}", name))),
+                    _ => bail!("Unknown tactics name: {}", name),
                 },
-                Some(token) => Err(Error::parse_error("A tactics name", token)),
-                None => Err(Error::unexpected_end_of_file("A tactics name")),
+                Some(token) => Err(self.parse_error("A tactics name", token)),
+                None => Err(self.unexpected_end_of_file("A tactics name")),
             },
             Some(Token::WithKeyword) => Ok(OptionalTactics::With),
-            Some(token) => Err(Error::parse_error(
+            Some(token) => Err(self.parse_error(
                 "A tactics, within braces '{ ... }', or the '?' unfinished tactics.",
                 token,
             )),
-            None => Err(Error::unexpected_end_of_file(
+            None => Err(self.unexpected_end_of_file(
                 "A tactics, within braces '{ ... }', or the '?' unfinished tactics.",
             )),
         }
@@ -277,7 +292,7 @@ impl<'a> Parser<'a> {
     pub fn parse_formula(&mut self) -> Result<Formula> {
         match self.parse_optional_formula() {
             Ok(Some(formula)) => Ok(formula),
-            Ok(None) => Err(Error::parse_error(
+            Ok(None) => Err(self.parse_error(
                 "A formula, within dollar signs '$ ... $'.",
                 Token::CurlyBracketClose,
             )),
@@ -291,11 +306,11 @@ impl<'a> Parser<'a> {
             Some(Token::FormulaStart) => {
                 Ok(Some(self.parse_mm_formula()?))
             }
-            Some(token) => Err(Error::parse_error(
+            Some(token) => Err(self.parse_error(
                 "A formula, within dollar signs '$ ... $'.",
                 token,
             )),
-            None => Err(Error::unexpected_end_of_file(
+            None => Err(self.unexpected_end_of_file(
                 "A formula, within dollar signs '$ ... $'.",
             )),
         }
@@ -305,7 +320,8 @@ impl<'a> Parser<'a> {
         let mut mmlex = self.lexer.to_owned().morph();
         let mut symbols = Vec::new();
         for t in &mut mmlex {
-            let span = Span::new(0, 1); // We could use mmlex.spanned() to get the spans of each token!
+            let lspan = self.lexer.span();
+            let span = Span::new(lspan.start, lspan.end);
             match t {
                 MMToken::Token(name) => {
                     symbols.push(FormulaToken { symbol: self.db.get_symbol(name)?, span });
@@ -317,7 +333,7 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 MMToken::LexerError => {
-                    return Err(Error::MMLexerError);
+                    return Err(Error::MMLexerError.into());
                 }
             }
         }
@@ -345,7 +361,7 @@ impl<'a> Parser<'a> {
             Some(Token::TheoremIdentifier(id)) => Ok(Some(Expression::Statement(StatementExpression::Variable(id)))),
             Some(Token::TacticsIdentifier(id)) => Ok(Some(Expression::Tactics(TacticsExpression::Variable(id)))),
             Some(Token::FormulaIdentifier(id)) => Ok(Some(Expression::Formula(FormulaExpression::Variable(id)))),
-            Some(Token::TheoremLabel(name)) => Ok(Some(Expression::Statement(StatementExpression::Constant(self.db.get_theorem_label(name[1..].to_string())?)))),
+            Some(Token::TheoremLabel(name)) => Ok(Some(Expression::Statement(StatementExpression::Constant(self.get_theorem_label(name)?)))),
             Some(Token::TodoKeyword) => Expression::tactics(Skipped {}.into_arc()),
             Some(Token::HypoKeyword) => Expression::tactics(Hypothesis {}.into_arc()),
             Some(Token::CurlyBracketOpen) => match self.next_token() {
@@ -357,32 +373,35 @@ impl<'a> Parser<'a> {
                     "match" => Expression::tactics(Match::parse(self)?.into_arc()),
                     "find" => Expression::tactics(Find::parse(self)?.into_arc()),
                     "findhyp" => Expression::tactics(FindHyp::parse(self)?.into_arc()),
-                    _ => Err(Error::msg(format!("Unknown tactics name: {}", name))),
+                    _ => bail!("Unknown tactics name: {}", name),
                 },
-                Some(token) => Err(Error::parse_error("A tactics name", token)),
-                None => Err(Error::unexpected_end_of_file("A tactics name")),
+                Some(token) => Err(self.parse_error("A tactics name", token)),
+                None => Err(self.unexpected_end_of_file("A tactics name")),
             },
             Some(Token::CurlyBracketClose) => Ok(None),
             Some(Token::FormulaStart) => Ok(Some(Expression::Formula(FormulaExpression::Formula(self.parse_mm_formula()?)))),
-            Some(token) => Err(Error::parse_error(
+            Some(token) => Err(self.parse_error(
                 "The tactics or the proof keywords",
                 token,
             ))?,
-            None => Err(Error::unexpected_end_of_file(
+            None => Err(self.unexpected_end_of_file(
                 "The tactics or the proof keywords",
             ))?,
         }
     }
 
-    pub fn parse_script(&mut self) -> Result<Script> {
-        let mut tactics_definitions = Vec::new();
-        let mut proof_definitions = Vec::new();
+    fn parse_commands(&mut self, tactics_definitions: &mut Vec<TacticsDefinition>, proof_definitions: &mut Vec<ProofDefinition>) -> Result {
         loop {
             match self.next_token() {
                 Some(Token::LoadKeyword) => {
                     let filename = self.parse_string_constant()?;
-                    self.db.parse(filename)?;
+                    self.db.parse(&filename).with_context(|| format!("Failed to parse Metamath database {}", filename))?;
                 }
+                // Some(Token::IncludeKeyword) => {
+                //     let filename = self.parse_string_constant()?;
+                //     let mut parser = Self::from_file(&filename)?;
+                //     parser.parse_commands(tactics_definitions, proof_definitions).with_context(|| format!("When parsing {}", filename))?;
+                // }
                 Some(Token::TacticsKeyword) => {
                     tactics_definitions.push(TacticsDefinition::parse(self)?);
                 }
@@ -390,20 +409,49 @@ impl<'a> Parser<'a> {
                     proof_definitions.push(ProofDefinition::parse(self)?);
                 }
                 Some(token) => {
-                    return Err(Error::parse_error(
+                    return Err(self.parse_error(
                         "The tactics or the proof keywords",
                         token,
                     ));
                 }
                 None => {
-                    return Ok(Script::new(
-                        self.db.clone(),
-                        tactics_definitions,
-                        proof_definitions,
-                    ));
+                    return Ok(());
                 }
             }
         }
+    }
+
+    pub fn parse_script(&mut self) -> Result<Script> {
+        let mut tactics_definitions = Vec::new();
+        let mut proof_definitions = Vec::new();
+        self.parse_commands(&mut tactics_definitions, &mut proof_definitions)?;
+        Ok(Script::new(
+            self.db.clone(),
+            tactics_definitions,
+            proof_definitions,
+        ))
+    }
+
+    pub fn location(&self) -> Location {
+        Location {
+            filename: self.filename.clone(),
+            span: self.lexer.span(),
+        }
+    }
+
+    pub fn parse_error(&self, expected: &str, found: Token) -> anyhow::Error {
+        Error::ParseError {
+            location: self.location(),
+            expected: expected.to_string(),
+            found,
+        }.into()
+    }
+
+    pub fn unexpected_end_of_file(&self, expected: &str) -> anyhow::Error {
+        Error::UnexpectedEndOfFile {
+            location: self.location(),
+            expected: expected.to_string(),
+        }.into()
     }
 }
 

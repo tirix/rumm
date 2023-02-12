@@ -1,3 +1,4 @@
+use anyhow::Context as AnyhowContext;
 use crate::lang::Expression;
 use crate::tactics::TacticsError;
 use crate::lang::TacticsExpression;
@@ -63,17 +64,17 @@ impl Display for TacticsDefinition {
 
 impl Parse for TacticsDefinition {
     fn parse(parser: &mut Parser) -> Result<Self> {
-        let name = parser.parse_identifier()?;
+        let name = parser.parse_identifier().context("while parsing new tactics script")?;
         let description = parser
             .last_description()
             .unwrap_or_else(|| "* no description provided *".to_string());
         let mut parameter_definition = Vec::new();
         parser.parse_token(Token::ParensOpen)?;
-        while let Some(parameter) = parser.parse_parameter_definition()? {
+        while let Some(parameter) = parser.parse_parameter_definition().with_context(|| format!("while parsing {} tactics script parameter definition", name))? {
             parameter_definition.push(parameter);
         }
         // parse_parameter_definition returns None when it encounters the closing parens
-        let tactics = parser.parse_tactics()?;
+        let tactics = parser.parse_tactics().with_context(|| format!("while parsing {} tactics script", name))?;
         Ok(TacticsDefinition {
             name,
             description,
