@@ -1,7 +1,7 @@
 use crate::parser::OptionalTactics;
 use std::sync::Arc;
 use crate::tactics::Tactics;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::parser::Parser;
 use crate::parser::Parse;
 use crate::parser::Token;
@@ -58,13 +58,13 @@ impl Parse for FormulaExpression {
                 let substitute_in = parser.parse_formula_expression()?;
                 Ok(FormulaExpression::Substitution(substitute_what, substitute_with, Box::new(substitute_in)))
             },
-            Some(token) => Err(Error::parse_error(
+            Some(token) => Err(parser.parse_error(
                 "A match target, either a formula, the 'goal keyword, or a label statement'.",
                 token,
-            )),
-            None => Err(Error::unexpected_end_of_file(
+            ).into()),
+            None => Err(parser.unexpected_end_of_file(
                 "A match target, either a formula, the 'goal keyword, or a label statement'.",
-            )),
+            ).into()),
         }
 	}
 }
@@ -135,8 +135,8 @@ impl Parse for StatementExpression {
     	match parser.next_token() {
     		Some(Token::TheoremLabel(name)) => Ok(StatementExpression::Constant(parser.get_theorem_label(name)?)),
     		Some(Token::TheoremIdentifier(id)) => Ok(StatementExpression::Variable(id)),
-            Some(token) => Err(Error::parse_error("A statement expression", token)),
-            None => Err(Error::unexpected_end_of_file("A statement expression")),
+            Some(token) => Err(parser.parse_error("A statement expression", token).into()),
+            None => Err(parser.unexpected_end_of_file("A statement expression").into()),
     	}
     }
 }

@@ -6,20 +6,26 @@ mod lang;
 pub mod parser;
 pub mod script;
 pub mod tactics;
-//use simple_logger::SimpleLogger;
-use error::{Error, Result};
+use anyhow::Context;
+use clap::{clap_app, crate_version};
+use error::Result;
 use script::Script;
 use std::fs;
-use std::str::FromStr;
 
 fn run() -> Result {
-    let data = fs::read_to_string("examples/set.rmm")?;
-    let mut script = Script::from_str(&data)?;
+    let app = clap_app!(("rumm") =>
+        (version: crate_version!())
+        (about: "A tactics based proof language for Metamath")
+        (@arg RMM_FILE: +required "Rumm file to load"));
+    let matches = app.get_matches();
+    let path = matches.value_of("RMM_FILE").unwrap();
+    let data = fs::read_to_string(path)
+        .with_context(|| format!("could not read file `{}`", path))?;
+    let mut script = Script::from_str(path.to_string(), &data)?;
     script.execute()
 }
 
 fn main() {
-    //SimpleLogger::new().init().unwrap();
     match run() {
         Ok(()) => println!("Done."),
         Err(error) => eprintln!("Error: {:?}", error),

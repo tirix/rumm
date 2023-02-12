@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 use crate::lang::Display;
-use crate::parser::Token;
+
 use colored::*;
 use metamath_knife::grammar::FormulaToken;
 use core::cell::RefCell;
@@ -42,14 +42,14 @@ impl Default for Db {
 }
 
 impl Db {
-    pub fn parse(&mut self, filename: String) -> Result {
+    pub fn parse(&mut self, filename: &str) -> Result {
         let mut database = self.intern.borrow_mut();
 
         print!("Loading \"{}\" ... ", filename);
-        database.parse(filename.clone(), Vec::new());
+        database.parse(filename.to_string(), Vec::new());
         let err = database.diag_notations(&[DiagnosticClass::Parse]);
         if !err.is_empty() {
-            return Err(Error::DBError(err));
+            return Err(Error::DBError(err).into());
         }
         println!("{}", "ok".green());
 
@@ -57,7 +57,7 @@ impl Db {
         database.grammar_pass();
         let gerr = database.diag_notations(&[DiagnosticClass::Grammar]);
         if !gerr.is_empty() {
-            return Err(Error::DBError(gerr));
+            return Err(Error::DBError(gerr).into());
         }
         println!("{}", "ok".green());
 
@@ -65,7 +65,7 @@ impl Db {
         database.stmt_parse_pass();
         let gerr = database.diag_notations(&[DiagnosticClass::StmtParse]);
         if !gerr.is_empty() {
-            return Err(Error::DBError(gerr));
+            return Err(Error::DBError(gerr).into());
         }
         println!("{}", "ok".green());
         //let testx = self.get_theorem_label("testx".to_string()).unwrap();
@@ -79,20 +79,16 @@ impl Db {
         Ok(database
             .name_result()
             .lookup_symbol(name.as_bytes())
-            .ok_or(Error::msg(format!("Unknown symbol {}", name)))?
+            .ok_or(anyhow::anyhow!("Unknown symbol: {}", name))?
             .atom
         )
     }
 
-    pub fn get_theorem_label(&self, name: String) -> Result<Label> {
+    pub fn get_theorem_label(&self, name: String) -> Option<Label> {
         let database = self.intern.borrow();
-        Ok(database
+        Some(database
             .name_result()
-            .lookup_label(name.as_bytes())
-            .ok_or(Error::parse_error(
-                "A known theorem label",
-                Token::TheoremLabel(name),
-            ))?.atom
+            .lookup_label(name.as_bytes())?.atom
         )
     }
 
@@ -112,7 +108,7 @@ impl Db {
         let convert_to_provable = false;
         grammar
             .parse_formula(&mut symbols.into_iter(), &grammar.typecodes(), convert_to_provable, nset)
-            .map_err(|diag| Error::msg(format!("{:?}", diag)))
+            .map_err(|diag| Error::DBParseError(diag).into())
     }
 
     pub fn debug_formula<'a>(&'a self, f: &'a Formula) {
