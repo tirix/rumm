@@ -125,7 +125,7 @@ impl ProofDefinition {
                 Context::new(db.clone(), theorem_formula, essential_hypotheses, tactics_definitions);
             self.tactics.execute(&mut context)
         } else {
-            println!("Unknown theorem!");
+            println!("Unknown theorem {:?}!", self.theorem);
             Err(TacticsError::Error)
         }
     }

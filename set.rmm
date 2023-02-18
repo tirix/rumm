@@ -323,6 +323,27 @@ tactics deduction_apply ( ≈THM @T )
 	}
 }
 
+// 
+tactics construction ( +S ≈THM @T @U )
+{ match goal $ ( &W1 -> &W2 ) $ 
+	{ match statement ≈THM 
+		$ ( &W3 -> E. &S1 e. &C1 &W4 ) $
+		{	apply ~r19.29a
+			@U
+			{ use deduction_apply ≈THM @T }
+			with ~vx +S ~cA $ &C1 $ ~wps s/ $ &S1 $ / +S / $ &W4 $
+		}
+	}
+}
+
+// Like the "constuction" tactics, but for hypotheses.
+tactics construction_hyp ( @U )
+{ match goal $ ( &W1 -> &W2 ) $ 
+	{ findhyp $ ( &W3 -> E. &S1 e. &C1 &W4 ) $
+		{ apply ~r19.29a @U ! with ~vx $ &S1 $ ~cA $ &C1 $ ~wps $ &W4 $ }
+	}
+}
+
 // Prove that an expression is a real number, deduction version
 tactics reals_closure ()
 { try
@@ -389,3 +410,18 @@ proof ~ismidb
 		}
 	}
 }
+
+// proof ~isleag2lem
+// {	subgoal
+//	{ apply ~mpbid
+//		!
+//		{ apply ~isleag ! ! ! ! ! ! ! ! }
+//		with ~wps $ <" A B C "> ( leA ` G ) <" D E F "> $
+//	}
+//	$ ( ph -> E. x e. P ( x ( inA ` G ) <" D E F "> /\ <" A B C "> ( cgrA ` G ) <" D E x "> ) ) $
+//	{ use construction_hyp
+//		{ use construction $ a $ ~hlcgrex
+//			? ?
+//		}
+//	}
+// }
