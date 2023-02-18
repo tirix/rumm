@@ -18,7 +18,7 @@ pub enum FormulaExpression {
     Formula(Formula),
     Variable(String),
     Statement(StatementExpression),
-    Substitution(Formula, Formula, Box<FormulaExpression>),
+    Substitution(Formula, Box<FormulaExpression>, Box<FormulaExpression>),
 }
 
 impl Display for FormulaExpression {
@@ -53,10 +53,10 @@ impl Parse for FormulaExpression {
             Some(Token::BeginSubstitutionKeyword) => {
                 let substitute_what = parser.parse_formula()?;
                 parser.parse_token(Token::SubstitutionKeyword)?;
-                let substitute_with = parser.parse_formula()?;
+                let substitute_with = parser.parse_formula_expression()?;
                 parser.parse_token(Token::SubstitutionKeyword)?;
                 let substitute_in = parser.parse_formula_expression()?;
-                Ok(FormulaExpression::Substitution(substitute_what, substitute_with, Box::new(substitute_in)))
+                Ok(FormulaExpression::Substitution(substitute_what, Box::new(substitute_with), Box::new(substitute_in)))
             },
             Some(token) => Err(parser.parse_error(
                 "A match target, either a formula, the 'goal keyword, or a label statement'.",
@@ -77,7 +77,7 @@ impl FormulaExpression {
             FormulaExpression::Formula(f) => Ok(f.clone()),
             FormulaExpression::Variable(id) => context.get_formula_variable(id.to_string()).ok_or(TacticsError::Error),
             FormulaExpression::Substitution(what, with, in_expr) => {
-                Ok(in_expr.evaluate(context)?.substitute(context.variables()).replace(&what.substitute(context.variables()), &with.substitute(context.variables())))
+                Ok(in_expr.evaluate(context)?.substitute(context.variables()).replace(&what.substitute(context.variables()), &with.evaluate(context)?.substitute(context.variables())))
             }
         }
     }
