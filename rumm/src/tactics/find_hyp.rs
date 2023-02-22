@@ -56,24 +56,34 @@ impl Tactics for FindHyp {
         context.enter(&format!("Find! {}", DisplayPair(&target, &context.db)));
         for (label, formula) in context.clone().hypotheses().iter() {
             context.message(&format!("Trying {}", DisplayPair(formula, &context.db)));
-            if let Ok(step) = self.check_match(context, &target, &*formula, |_subst| {
+            match self.check_match(context, &target, &*formula, |_subst| {
                 Ok(ProofStep::hyp(*label, formula.clone()))
             }) {
-                context.exit(&format!("Matched hypothesis {}", DisplayPair(formula, &context.db)));
-                return Ok(step);
+                Ok(step) => {
+                    context.exit(&format!("Matched hypothesis {}", DisplayPair(formula, &context.db)));
+                    return Ok(step);
+                },
+                Err(e) => {
+                    context.message(&format!("{:?}", e));
+                },
             }
         }
         for (hyp, step) in context.clone().subgoals().iter() {
             context.message(&format!("Trying {}", DisplayPair(hyp, &context.db)));
-            if let Ok(step) = self.check_match(context, &target, &*hyp, |_subst| {
+            match self.check_match(context, &target, &*hyp, |_subst| {
                 Ok(step.clone())
             }) {
-                context.exit(&format!("Matched subgoal {}", DisplayPair(hyp, &context.db)));
-                return Ok(step);
+                Ok(step) => {
+                    context.exit(&format!("Matched subgoal {}", DisplayPair(hyp, &context.db)));
+                    return Ok(step);
+                },
+                Err(e) => {
+                    context.message(&format!("{:?}", e));
+                },
             }
         }
         context.exit("Find: No match found");
-        Err(TacticsError::Error)
+        Err(TacticsError::NoMatchFound)
     }
 }
 

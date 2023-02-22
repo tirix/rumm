@@ -75,13 +75,18 @@ impl Tactics for Match {
                     DisplayPair(&m2, &context.db)
                 ));
                 let mut sub_context = context.with_variables(&subst);
-                if let Ok(step) = m.1.execute(&mut sub_context) {
-                    context.exit("Match successful");
-                    return Ok(step);
+                match m.1.execute(&mut sub_context) {
+                    Ok(step) => {
+                        context.exit("Match successful");
+                        return Ok(step);
+                    },
+                    Err(e) => {
+                        context.message(format!("{:?}", e).as_str());
+                    },
                 }
             }
         }
         context.exit("-- Match failed --");
-        Err(TacticsError::Error)
+        Err(TacticsError::NoMatchFound)
     }
 }

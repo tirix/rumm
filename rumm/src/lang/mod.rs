@@ -15,6 +15,8 @@ pub use expression::Expression;
 pub use expression::FormulaExpression;
 pub use expression::StatementExpression;
 pub use expression::TacticsExpression;
+pub use expression::SubstitutionExpression;
+pub use expression::SubstitutionListExpression;
 pub use parameter_definition::ParameterDefinition;
 pub use proof_definition::ProofDefinition;
 pub use proof_definition::ProofStep;

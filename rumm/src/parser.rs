@@ -90,6 +90,9 @@ pub enum Token {
     #[regex("\\+[a-zA-Z0-9.\\-_]+", |lexer| String::from(lexer.slice()))]
     FormulaIdentifier(String),
 
+    #[regex("\\*[a-zA-Z0-9.\\-_]+", |lexer| String::from(lexer.slice()))]
+    SubstitutionListIdentifier(String),
+
     #[regex("[a-zA-Z0-9.\\-_]+", |lexer| String::from(lexer.slice()))]
     Identifier(String),
 
@@ -124,6 +127,11 @@ pub enum OptionalTactics {
     Some(TacticsExpression),
     With,
     None
+}
+
+pub enum FormulaOrSubstitutionListId {
+    Formula(Formula),
+    SubstitutionListIdentifier(String),
 }
 
 impl Display for Token {
@@ -166,6 +174,10 @@ impl<'a> Parser<'a> {
             println!("\tToken: {:?} ({:?})", token, self.lexer.slice());
         }
         token
+    }
+
+    pub fn parse_mandatory_token(&mut self, expected: &str) -> Result<Token> {
+        self.next_token().ok_or_else(|| self.unexpected_end_of_file(expected))        
     }
 
     pub fn last_description(&mut self) -> Option<String> {
@@ -247,6 +259,16 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_substitution_expression(&mut self) -> Result<Option<SubstitutionExpression>> {
+        match self.next_token() {
+            Some(Token::CurlyBracketClose) => Ok(None),
+            Some(Token::TheoremLabel(name)) => Ok(Some(SubstitutionExpression::Constant((self.get_theorem_label(name)?, FormulaExpression::parse(self)?)))),
+            Some(Token::SubstitutionListIdentifier(id)) => Ok(Some(SubstitutionExpression::Variable(id))),
+            Some(token) => Err(self.parse_error("A Theorem Label", token)),
+            None => Err(self.unexpected_end_of_file("A Theorem Label")),
+        }
+    }
+
     pub fn parse_tactics(&mut self) -> Result<TacticsExpression> {
         match self.parse_optional_tactics() {
             Ok(OptionalTactics::Some(tactics)) => Ok(tactics),
@@ -316,6 +338,20 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse_formula_or_substvar(&mut self) -> Result<FormulaOrSubstitutionListId> {
+        match self.next_token() {
+            Some(Token::FormulaStart) => Ok(FormulaOrSubstitutionListId::Formula(self.parse_mm_formula()?)),
+            Some(Token::SubstitutionListIdentifier(id)) => Ok(FormulaOrSubstitutionListId::SubstitutionListIdentifier(id)),
+            Some(token) => Err(self.parse_error(
+                "A formula, within dollar signs '$ ... $', or a substitution list identifier, starting with a star '*'",
+                token,
+            )),
+            None => Err(self.unexpected_end_of_file(
+                "A formula, within dollar signs '$ ... $', or a substitution list identifier, starting with a star '*'",
+            )),
+        }
+    }
+
     pub fn parse_mm_formula(&mut self) -> Result<Formula> {
         let mut mmlex = self.lexer.to_owned().morph();
         let mut symbols = Vec::new();
@@ -349,7 +385,12 @@ impl<'a> Parser<'a> {
         let mut parameters = Vec::new();
         loop {
             if let Some(p) = self.parse_optional_parameter()? {
-                parameters.push(p);
+                if let Expression::SubstitutionList(_) = &p {
+                    parameters.push(p);
+                    return Ok(parameters);
+                } else {
+                    parameters.push(p);
+                }
             } else {
                 return Ok(parameters);
             }
@@ -378,8 +419,9 @@ impl<'a> Parser<'a> {
                 Some(token) => Err(self.parse_error("A tactics name", token)),
                 None => Err(self.unexpected_end_of_file("A tactics name")),
             },
-            Some(Token::CurlyBracketClose) => Ok(None),
             Some(Token::FormulaStart) => Ok(Some(Expression::Formula(FormulaExpression::Formula(self.parse_mm_formula()?)))),
+            Some(Token::WithKeyword) => Ok(Some(Expression::SubstitutionList(SubstitutionListExpression::parse(self)?))),
+            Some(Token::CurlyBracketClose) => Ok(None),
             Some(token) => Err(self.parse_error(
                 "The tactics or the proof keywords",
                 token,

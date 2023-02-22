@@ -126,7 +126,7 @@ impl ProofDefinition {
             self.tactics.execute(&mut context)
         } else {
             println!("Unknown theorem {:?}!", self.theorem);
-            Err(TacticsError::Error)
+            Err(TacticsError::UnknownLabel(self.theorem))
         }
     }
 

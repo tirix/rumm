@@ -1,7 +1,6 @@
 use crate::lang::DisplayPair;
-use crate::lang::FormulaExpression;
-use metamath_knife::{Label, formula::Substitutions};
-use std::collections::HashMap;
+use crate::lang::SubstitutionListExpression;
+use metamath_knife::formula::Substitutions;
 use crate::lang::TacticsExpression;
 use crate::context::Context;
 use crate::error::Result;
@@ -20,7 +19,7 @@ use core::fmt::Formatter;
 pub struct Apply {
     theorem: StatementExpression,
     subtactics: Vec<TacticsExpression>,
-    substitutions: HashMap<Label, FormulaExpression>,
+    substitutions: SubstitutionListExpression,
 }
 
 impl Display for Apply {
@@ -38,16 +37,13 @@ impl Parse for Apply {
     fn parse(parser: &mut Parser) -> Result<Self> {
         let theorem = StatementExpression::parse(parser)?;
         let mut subtactics = Vec::new();
-        let mut substitutions = HashMap::new();
+        let mut substitutions = SubstitutionListExpression::default();
         loop {
             match parser.parse_optional_tactics()? {
                 OptionalTactics::Some(t) => subtactics.push(t),
                 OptionalTactics::None => break,
                 OptionalTactics::With => {
-                    while let Some(l) = parser.parse_optional_statement()? {
-                        let f = parser.parse_formula_expression()?;
-                        substitutions.insert(l, f);
-                    }
+                    substitutions = SubstitutionListExpression::parse(parser)?;
                     break;
                 }
             }
@@ -72,15 +68,16 @@ impl Tactics for Apply {
 
     fn execute(&self, context: &mut Context) -> TacticsResult {
         context.enter(&format!("Apply {}", DisplayPair(&self.theorem, &context.db)));
-        //context.db.debug_formula(context.goal());
+        context.db.debug_formula(context.goal());
         // println!("  vars:{}", DisplayPair(context.variables(), &context.db));
         let mut my_subst = Substitutions::default();
-        for (l,f) in self.substitutions.iter() {
-            my_subst.insert(*l, f.evaluate(context)?.substitute(context.variables()));
+        for (l,f) in self.substitutions.evaluate(context)?.iter() {
+            context.message(format!("Subst: {} {}", DisplayPair(l, &context.db), DisplayPair(f, &context.db)).as_str());
+            my_subst.insert(*l, f.substitute(context.variables()));
         }
 
         let theorem = self.theorem.evaluate(context)?;
-        context.message(&format!("  Attempting apply {}", DisplayPair(&theorem, &context.db)));
+        context.message(&format!(" Attempting apply {}", DisplayPair(&theorem, &context.db)));
         if let Some((theorem_formula, hyps)) = context.get_theorem_formulas(theorem) {
             let mut subst = Substitutions::new();
             if let Err(e) = context.goal().unify(&theorem_formula, &mut subst) {
@@ -106,11 +103,11 @@ impl Tactics for Apply {
                 ))
             } else {
                 context.exit("Apply Hyps don't match");
-                Err(TacticsError::CriticalError)
+                Err(TacticsError::WrongHypCount(self.subtactics.len(), hyps.len()))
             }
         } else {
             context.exit("Unknown theorem label");
-            Err(TacticsError::Error)
+            Err(TacticsError::UnknownLabel(theorem))
         }
     }
 }
