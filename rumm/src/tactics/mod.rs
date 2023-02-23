@@ -14,6 +14,7 @@ use std::sync::Arc;
 pub use apply::Apply;
 pub use hypothesis::Hypothesis;
 use metamath_knife::Label;
+use metamath_knife::formula::TypeCode;
 use metamath_knife::formula::UnificationError;
 pub use r#match::Match;
 pub use r#try::Try;
@@ -38,6 +39,7 @@ pub enum TacticsError {
     NoMatchFound,
     WrongParameterCount(usize, usize),
     WrongHypCount(usize, usize),
+    WrongTypecode(TypeCode, TypeCode, Label),
     UnknownLabel(Label),
     UnknownFormulaVariable(String),
     UnknownTacticsVariable(String),

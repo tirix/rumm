@@ -206,7 +206,7 @@ impl SubstitutionListExpression {
         let mut subst = Substitutions::new();
         for s in &self.list {
             match s {
-                SubstitutionExpression::Constant((l, f)) => { subst.insert(*l, f.evaluate(context)?); },
+                SubstitutionExpression::Constant((l, f)) => { subst.insert(*l, context.db.ensure_type(f.evaluate(context)?, *l)?); },
                 SubstitutionExpression::Variable(id) => { subst.extend(context.get_substitution_variable(id.to_string()).ok_or(TacticsError::UnknownSubstitutionVariable(id.to_string()))?); },
             }
         }

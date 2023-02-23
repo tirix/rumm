@@ -1,5 +1,6 @@
 use crate::error::{Error, Result};
 use crate::lang::Display;
+use crate::tactics::{TacticsResult, TacticsError};
 
 use colored::*;
 use metamath_knife::grammar::FormulaToken;
@@ -109,6 +110,18 @@ impl Db {
         grammar
             .parse_formula(&mut symbols.into_iter(), &grammar.typecodes(), convert_to_provable, nset)
             .map_err(|diag| Error::DBParseError(diag).into())
+    }
+
+    pub fn ensure_type(&self, fmla: Formula, label: Label) -> TacticsResult<Formula> {
+        let database = self.intern.borrow();
+        let target_tc = database.label_typecode(label);
+        let source_tc = fmla.get_typecode();
+        if target_tc != source_tc {
+            let grammar = database.grammar_result().clone();
+            grammar.convert_typecode(fmla, target_tc).ok_or(TacticsError::WrongTypecode(source_tc, target_tc, label))
+        } else {
+            Ok(fmla)
+        }
     }
 
     pub fn debug_formula<'a>(&'a self, f: &'a Formula) {
