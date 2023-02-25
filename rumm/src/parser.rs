@@ -3,13 +3,13 @@ use crate::error::{Error, Result, Location};
 use crate::lang::*;
 use crate::script::Script;
 use crate::tactics::*;
-use anyhow::{bail, Context};
 use logos::{Lexer, Logos};
-use metamath_knife::{Formula, Span};
+use metamath_knife::{Formula, Span, Symbol};
 use metamath_knife::Label;
 use metamath_knife::grammar::FormulaToken;
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::ops::ControlFlow;
 
 // TODO in order to provide line number errors, I think we would need to implement Logos::Source...
 // OR we add a token for newlines, which we use to count the line, and the position of the last line start :)
@@ -195,6 +195,15 @@ impl<'a> Parser<'a> {
         )
     }
 
+    fn get_symbol(&self, name: String) -> Result<Symbol> {
+        self.db.get_symbol(name.clone())
+            .ok_or(Error::UnknownSymbol{
+                location: self.location(), 
+                symbol: name,
+            }.into()
+        )
+    }
+
     pub fn parse_token(&mut self, expected: Token) -> Result {
         match self.next_token() {
             Some(found) => {
@@ -249,13 +258,8 @@ impl<'a> Parser<'a> {
         let definition_result = ParameterDefinition::parse(self);
         match definition_result {
             Ok(parameter_definition) => Ok(Some(parameter_definition)),
-            Err(error) => {
-                let e = error.downcast::<Error>()?;
-                match e {
-                    Error::ParseError { found: Token::ParensClose, .. } => Ok(None),
-                    _ => Err(e.into()),
-                }
-            }
+            Err(Error::ParseError { found: Token::ParensClose, .. }) => Ok(None),
+            Err(error) => Err(error),
         }
     }
 
@@ -295,7 +299,7 @@ impl<'a> Parser<'a> {
                     "match" => TacticsExpression::cst(Match::parse(self)?.into_arc()),
                     "find" => TacticsExpression::cst(Find::parse(self)?.into_arc()),
                     "findhyp" => TacticsExpression::cst(FindHyp::parse(self)?.into_arc()),
-                    _ => bail!("Unknown tactics name: {}", name),
+                    _ => Err(Error::UnknownTacticsName(self.location(), name)),
                 },
                 Some(token) => Err(self.parse_error("A tactics name", token)),
                 None => Err(self.unexpected_end_of_file("A tactics name")),
@@ -360,21 +364,21 @@ impl<'a> Parser<'a> {
             let span = Span::new(lspan.start, lspan.end);
             match t {
                 MMToken::Token(name) => {
-                    symbols.push(FormulaToken { symbol: self.db.get_symbol(name)?, span });
+                    symbols.push(FormulaToken { symbol: self.get_symbol(name)?, span });
                 }
                 MMToken::Variable(name) => {
-                    symbols.push(FormulaToken { symbol: self.db.get_symbol(name)?, span });
+                    symbols.push(FormulaToken { symbol: self.get_symbol(name)?, span });
                 }
                 MMToken::End => {
                     break;
                 }
                 MMToken::LexerError => {
-                    return Err(Error::MMLexerError.into());
+                    return Err(Error::MMLexerError{ location: self.location() }.into());
                 }
             }
         }
         self.lexer = mmlex.morph();
-        Ok(self.db.parse_formula(symbols)?)
+        self.db.parse_formula(symbols).map_err(|diag| Error::DBParseError{ error: diag, location: self.location() }.into())
     }
 
     pub fn parse_formula_expression(&mut self) -> Result<FormulaExpression> {
@@ -414,7 +418,7 @@ impl<'a> Parser<'a> {
                     "match" => Expression::tactics(Match::parse(self)?.into_arc()),
                     "find" => Expression::tactics(Find::parse(self)?.into_arc()),
                     "findhyp" => Expression::tactics(FindHyp::parse(self)?.into_arc()),
-                    _ => bail!("Unknown tactics name: {}", name),
+                    _ => Err(Error::UnknownTacticsName(self.location(), name)),
                 },
                 Some(token) => Err(self.parse_error("A tactics name", token)),
                 None => Err(self.unexpected_end_of_file("A tactics name")),
@@ -437,7 +441,7 @@ impl<'a> Parser<'a> {
             match self.next_token() {
                 Some(Token::LoadKeyword) => {
                     let filename = self.parse_string_constant()?;
-                    self.db.parse(&filename).with_context(|| format!("Failed to parse Metamath database {}", filename))?;
+                    self.db.parse(&filename)?; // TODO map_err to add the location of the error
                 }
                 // Some(Token::IncludeKeyword) => {
                 //     let filename = self.parse_string_constant()?;
@@ -475,25 +479,44 @@ impl<'a> Parser<'a> {
     }
 
     pub fn location(&self) -> Location {
-        Location {
-            filename: self.filename.clone(),
-            span: self.lexer.span(),
-        }
+        let filename = self.filename.clone();
+        let span = self.lexer.span();
+        let source = self.lexer.source();
+        if let ControlFlow::Break((line_number, line_start, line)) = source.lines().try_fold((1, 0, ""), |(l, s, _), line| {
+            if s + line.len() + 1 > span.start { ControlFlow::Break((l, s, line)) }
+            else { ControlFlow::Continue((l+1, s+line.len()+1, line)) }
+            }) {
+                Location {
+                    filename,
+                    line_number,
+                    line: line.to_string(),
+                    start: span.start - line_start,
+                    end: span.end - line_start,
+                }
+            } else {
+                Location {
+                    filename,
+                    line: "".to_string(),
+                    line_number: 1,
+                    start: 0,
+                    end: 0,
+                }
+            }
     }
 
-    pub fn parse_error(&self, expected: &str, found: Token) -> anyhow::Error {
+    pub fn parse_error(&self, expected: &str, found: Token) -> Error {
         Error::ParseError {
             location: self.location(),
             expected: expected.to_string(),
             found,
-        }.into()
+        }
     }
 
-    pub fn unexpected_end_of_file(&self, expected: &str) -> anyhow::Error {
+    pub fn unexpected_end_of_file(&self, expected: &str) -> Error {
         Error::UnexpectedEndOfFile {
             location: self.location(),
             expected: expected.to_string(),
-        }.into()
+        }
     }
 }
 

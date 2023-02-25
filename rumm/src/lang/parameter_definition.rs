@@ -17,8 +17,8 @@ impl Parse for ParameterDefinition {
             Some(Token::TheoremIdentifier(id)) => Ok(ParameterDefinition::Theorem(id)),
             Some(Token::FormulaIdentifier(id)) => Ok(ParameterDefinition::Formula(id)),
             Some(Token::WithKeyword) => Self::parse_substitution_parameter_definition(parser),
-            Some(token) => Err(parser.parse_error("String constant", token).into()),
-            None => Err(parser.unexpected_end_of_file("String constant").into()),
+            Some(token) => Err(parser.parse_error("A parameter definition, or a closing parens ')'", token).into()),
+            None => Err(parser.unexpected_end_of_file("A parameter definition, or a closing parens ')'").into()),
         }
     }
 }

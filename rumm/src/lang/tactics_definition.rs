@@ -1,9 +1,8 @@
-use anyhow::Context as AnyhowContext;
 use crate::lang::Expression;
 use crate::tactics::TacticsError;
 use crate::lang::TacticsExpression;
 use crate::context::Context;
-use crate::error::Result;
+use crate::error::{Result, Error};
 use crate::lang::ParameterDefinition;
 use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser, Token};
@@ -64,17 +63,17 @@ impl Display for TacticsDefinition {
 
 impl Parse for TacticsDefinition {
     fn parse(parser: &mut Parser) -> Result<Self> {
-        let name = parser.parse_identifier().context("while parsing new tactics script")?;
+        let name = parser.parse_identifier()?;
         let description = parser
             .last_description()
             .unwrap_or_else(|| "* no description provided *".to_string());
         let mut parameter_definition = Vec::new();
         parser.parse_token(Token::ParensOpen)?;
-        while let Some(parameter) = parser.parse_parameter_definition().with_context(|| format!("while parsing {} tactics script parameter definition", name))? {
+        while let Some(parameter) = parser.parse_parameter_definition().map_err(|e| Error::TacticsParameterParseError(Box::new(e), name.clone()))? {
             parameter_definition.push(parameter);
         }
         // parse_parameter_definition returns None when it encounters the closing parens
-        let tactics = parser.parse_tactics().with_context(|| format!("while parsing {} tactics script", name))?;
+        let tactics = parser.parse_tactics().map_err(|e| Error::TacticsParseError(Box::new(e), name.clone()))?;
         Ok(TacticsDefinition {
             name,
             description,
