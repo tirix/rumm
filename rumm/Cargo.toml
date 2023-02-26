@@ -13,10 +13,10 @@ logos = "0.12.0"
 chrono = "0.4"
 colored = "2"
 clap = "2.33"
-anyhow = "1.0"
+typed-arena = "2.0"
 thiserror = "1.0"
 annotate-snippets = "0.9"
 simple_logger = "1.13.0"
 # metamath-knife = { path = "../../metamath-knife" }
 # metamath-knife = { git = "https://github.com/david-a-wheeler/metamath-knife", tag="v0.3.6"}
-metamath-knife = { git = "https://github.com/david-a-wheeler/metamath-knife", rev="fd40179"}
+metamath-knife = { git = "https://github.com/david-a-wheeler/metamath-knife", rev="a5a22c8"}

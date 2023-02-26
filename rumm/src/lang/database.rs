@@ -8,7 +8,7 @@ use core::cell::RefCell;
 use core::fmt::Formatter;
 use metamath_knife::as_str;
 use metamath_knife::database::DbOptions;
-use metamath_knife::diag::DiagnosticClass;
+use metamath_knife::diag::{DiagnosticClass, StmtParseError};
 use metamath_knife::formula::Substitutions;
 use metamath_knife::proof::ProofTreeArray;
 use metamath_knife::verify::ProofBuilder;
@@ -50,7 +50,7 @@ impl Db {
         database.parse(filename.to_string(), Vec::new());
         let err = database.diag_notations(&[DiagnosticClass::Parse]);
         if !err.is_empty() {
-            return Err(Error::DBError(err).into());
+            return Err(Error::DBError(filename.to_string(), err).into());
         }
         println!("{}", "ok".green());
 
@@ -58,7 +58,7 @@ impl Db {
         database.grammar_pass();
         let gerr = database.diag_notations(&[DiagnosticClass::Grammar]);
         if !gerr.is_empty() {
-            return Err(Error::DBError(gerr).into());
+            return Err(Error::DBError(filename.to_string(), gerr).into());
         }
         println!("{}", "ok".green());
 
@@ -66,7 +66,7 @@ impl Db {
         database.stmt_parse_pass();
         let gerr = database.diag_notations(&[DiagnosticClass::StmtParse]);
         if !gerr.is_empty() {
-            return Err(Error::DBError(gerr).into());
+            return Err(Error::DBError(filename.to_string(), gerr).into());
         }
         println!("{}", "ok".green());
         //let testx = self.get_theorem_label("testx".to_string()).unwrap();
@@ -75,12 +75,11 @@ impl Db {
         Ok(())
     }
 
-    pub fn get_symbol(&self, name: String) -> Result<Symbol> {
+    pub fn get_symbol(&self, name: String) -> Option<Symbol> {
         let database = self.intern.borrow();
-        Ok(database
+        Some(database
             .name_result()
-            .lookup_symbol(name.as_bytes())
-            .ok_or(anyhow::anyhow!("Unknown symbol: {}", name))?
+            .lookup_symbol(name.as_bytes())?
             .atom
         )
     }
@@ -102,14 +101,13 @@ impl Db {
         Some((formula, hypotheses.into_boxed_slice()))
     }
 
-    pub fn parse_formula(&self, symbols: Vec<FormulaToken>) -> Result<Formula> {
+    pub fn parse_formula(&self, symbols: Vec<FormulaToken>) -> std::result::Result<Formula, StmtParseError> {
         let database = self.intern.borrow();
         let grammar = database.grammar_result().clone();
         let nset = database.name_result();
         let convert_to_provable = false;
         grammar
             .parse_formula(&mut symbols.into_iter(), &grammar.typecodes(), convert_to_provable, nset)
-            .map_err(|diag| Error::DBParseError(diag).into())
     }
 
     pub fn ensure_type(&self, fmla: Formula, label: Label) -> TacticsResult<Formula> {
