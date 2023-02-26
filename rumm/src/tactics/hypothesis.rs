@@ -53,6 +53,6 @@ impl Tactics for Hypothesis {
             }
         }
         context.exit("Hypothesis failed");
-        Err(TacticsError::Error)
+        Err(TacticsError::NoMatchFound)
     }
 }

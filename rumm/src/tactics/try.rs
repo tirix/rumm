@@ -46,12 +46,17 @@ impl Tactics for Try {
     fn execute(&self, context: &mut Context) -> TacticsResult {
         context.enter("Try");
         for t in &self.tactics {
-            if let Ok(step) = t.execute(context) {
-                context.exit("Try Successful");
-                return Ok(step);
+            match t.execute(context) {
+                Ok(step) => {
+                    context.exit("Try Successful");
+                    return Ok(step);
+                },
+                Err(e) => {
+                    context.message(format!("{:?}",e).as_str());
+                },
             }
         }
         context.exit("-- Try Failed --");
-        Err(TacticsError::Error)
+        Err(TacticsError::NoMatchFound)
     }
 }

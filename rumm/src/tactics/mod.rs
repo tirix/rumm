@@ -13,6 +13,8 @@ mod use_script_tactics;
 use std::sync::Arc;
 pub use apply::Apply;
 pub use hypothesis::Hypothesis;
+use metamath_knife::Label;
+use metamath_knife::formula::TypeCode;
 use metamath_knife::formula::UnificationError;
 pub use r#match::Match;
 pub use r#try::Try;
@@ -29,16 +31,25 @@ use crate::parser::Parse;
 
 pub type TacticsResult<T = ProofStep> = std::result::Result<T, TacticsError>;
 
-// TODO Add relevant errors
+#[derive(Debug)]
 pub enum TacticsError {
-    Error,
-    CriticalError,
-    UnificationError,
+    Skipped,
+    UnknownTactics(String),
+    UnificationFailed,
+    NoMatchFound,
+    WrongParameterCount(usize, usize),
+    WrongHypCount(usize, usize),
+    WrongTypecode(TypeCode, TypeCode, Label),
+    UnknownLabel(Label),
+    UnknownFormulaVariable(String),
+    UnknownTacticsVariable(String),
+    UnknownLabelVariable(String),
+    UnknownSubstitutionVariable(String),
 }
 
 impl From<UnificationError> for TacticsError {
     fn from(_: UnificationError) -> Self {
-        Self::UnificationError
+        Self::UnificationFailed
     }
 }
 

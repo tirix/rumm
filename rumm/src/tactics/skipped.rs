@@ -37,6 +37,6 @@ impl Tactics for Skipped {
     fn execute(&self, context: &mut Context) -> TacticsResult {
         context.enter("Skip");
         context.exit("Skipped!");
-        Err(TacticsError::Error)
+        Err(TacticsError::Skipped)
     }
 }

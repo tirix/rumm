@@ -51,7 +51,7 @@ impl Tactics for UseScriptTactics {
             res
         } else {
             context.exit(&format!("{} failed", self.name));
-            Err(TacticsError::Error)
+            Err(TacticsError::UnknownTactics(self.name.to_string()))
         }
     }
 }

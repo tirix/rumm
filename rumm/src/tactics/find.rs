@@ -91,7 +91,7 @@ impl Tactics for Find {
                         failed = true;
                     }
                 }
-                if failed { return Err(TacticsError::Error); };
+                if failed { return Err(TacticsError::NoMatchFound); };
                 context.message("Unification success");
                 let subgoal = formula.substitute(&subst);
                 context.message(&format!("  subgoal = {}", DisplayPair(&subgoal, &context.db)));
@@ -109,7 +109,7 @@ impl Tactics for Find {
             }
         }
         context.exit("Find: No match found");
-        Err(TacticsError::Error)
+        Err(TacticsError::NoMatchFound)
     }
 }
 

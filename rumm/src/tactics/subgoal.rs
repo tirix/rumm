@@ -4,7 +4,6 @@ use crate::error::Result;
 use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser};
 use crate::tactics::Tactics;
-use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
 use core::fmt::Formatter;
 
@@ -54,14 +53,17 @@ impl Tactics for Subgoal {
         context.enter("Subgoal");
         let subgoal = self.subgoal.evaluate(context)?.substitute(context.variables());
         let mut context1 = context.with_goal(subgoal.clone());
-        if let Ok(step1) = self.tactics1.execute(&mut context1) {
-            context.add_subgoal(subgoal, step1);
-            let res = self.tactics2.execute(&mut context);
-            context.exit("Subgoal complete");
-            res
-        } else {
-            context.exit("-- Subgoal failed --");
-            Err(TacticsError::Error)
+        match self.tactics1.execute(&mut context1) {
+            Ok(step1) => {
+                context.add_subgoal(subgoal, step1);
+                let res = self.tactics2.execute(&mut context);
+                context.exit("Subgoal complete");
+                res
+            },
+            Err(e) => {
+                context.exit("-- Subgoal failed --");
+                Err(e)
+            }
         }
     }
 }
