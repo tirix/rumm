@@ -5,6 +5,7 @@ use crate::parser::{Parse, Parser};
 use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
+use crate::trace::Trace;
 use core::fmt::Formatter;
 
 /// A special tactics, representing a proof not completed yet, marked by a question mark.
@@ -34,9 +35,7 @@ impl Tactics for Skipped {
         "The \"to do\" tactics, leaving the goal unproven and filling in the Metamath proof with an incomplete, question mark proof.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
-        context.enter("Skip");
-        context.exit("Skipped!");
+    fn execute_intern(&self, _trace: &mut Trace, _context: &mut Context) -> TacticsResult {
         Err(TacticsError::Skipped)
     }
 }

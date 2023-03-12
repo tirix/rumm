@@ -6,6 +6,7 @@ use crate::parser::{Parse, Parser};
 use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
+use crate::trace::Trace;
 use core::fmt::Formatter;
 
 /// Calling a script tactics.
@@ -40,17 +41,14 @@ impl Tactics for UseScriptTactics {
         "A tactics for calling a tactics defined in the Rumm script.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
-        context.enter(&format!("Use {}", self.name));
+    fn execute_intern(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult {
         if let Some(tactics_definition) = context.clone().get_tactics_definition(self.name.clone())
         {
             let mut sub_context = context.without_variables();
             tactics_definition.add_variables(&mut sub_context, &self.parameters)?;
-            let res = tactics_definition.execute(&mut sub_context);
-            context.exit(&format!("{} complete", self.name));
+            let res = tactics_definition.execute(trace, &mut sub_context);
             res
         } else {
-            context.exit(&format!("{} failed", self.name));
             Err(TacticsError::UnknownTactics(self.name.to_string()))
         }
     }
