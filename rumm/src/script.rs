@@ -1,7 +1,10 @@
+use colored::Colorize;
+
 use crate::error::Result;
 use crate::lang::{Db, Display};
 use crate::lang::{ProofDefinition, TacticsDefinition, TacticsDict};
 use crate::parser::{Parse, Parser};
+use crate::trace::Trace;
 use core::fmt::{Debug, Formatter};
 
 pub struct Script {
@@ -50,16 +53,19 @@ impl Script {
 
     pub fn execute(&mut self) -> Result {
         for proof_def in &self.proof_definitions {
-            match proof_def.prove(self.db.clone(), self.tactics_definitions.clone()) {
-                Ok(step) => {
-                    println!("Success");
-                    let mut arr = step.as_proof_tree_array(self.db.clone());
-                    arr.calc_indent();
-                    self.db
-                        .export_mmp(proof_def.theorem(), &arr, &mut std::io::stdout());
+            let mut trace = Trace::new();
+            print!("Proving {} ... ", &proof_def.theorem().to_string(&self.db));
+            match proof_def.prove(self.db.clone(), self.tactics_definitions.clone(), &mut trace) {
+                Ok(_step) => {
+                    println!("{}", "ok".green());
+                    // let mut arr = step.as_proof_tree_array(self.db.clone());
+                    // arr.calc_indent();
+                    // self.db.export_mmp(proof_def.theorem(), &arr, &mut std::io::stdout());
                 }
                 Err(_) => {
-                    println!("Failure");
+                    println!("{}", "failed".red());
+                    //trace.dump();
+                    trace.export_js_tree(&proof_def.theorem().to_string(&self.db));
                 }
             }
         }

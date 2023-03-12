@@ -6,6 +6,7 @@ use crate::parser::{Parse, Parser};
 use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
+use crate::trace::Trace;
 use core::fmt::Formatter;
 
 /// A tactics which matches the goal with one of the hypothesis, or a zero-hypothesis theorem or axiom
@@ -35,11 +36,9 @@ impl Tactics for Hypothesis {
         "A tactics which matches the goal with one of the hypothesis.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
-        context.enter("!");
+    fn execute_intern(&self, _trace: &mut Trace, context: &mut Context) -> TacticsResult {
         for (label, hyp) in context.hypotheses().iter() {
             if context.goal().eq(hyp) {
-                context.exit("Matched hypothesis!");
                 return Ok(ProofStep::hyp(
                     *label,
                     context.goal().clone(),
@@ -48,11 +47,9 @@ impl Tactics for Hypothesis {
         }
         for (hyp, step) in context.subgoals().iter() {
             if context.goal().eq(hyp) {
-                context.exit("Matched subgoal!");
                 return Ok(step.clone());
             }
         }
-        context.exit("Hypothesis failed");
         Err(TacticsError::NoMatchFound)
     }
 }

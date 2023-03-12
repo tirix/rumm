@@ -2,7 +2,6 @@ use std::sync::Arc;
 use crate::tactics::Tactics;
 use crate::lang::ProofStep;
 use crate::lang::Db;
-use crate::lang::DisplayPair;
 use crate::lang::Hypotheses;
 use crate::lang::TacticsDefinition;
 use crate::lang::TacticsDict;
@@ -24,7 +23,6 @@ pub struct Context {
     tactics_variables: HashMap<String, Arc<dyn Tactics>>,
     formula_variables: HashMap<String, Formula>,
     subst_variables: HashMap<String, Substitutions>,
-    depth: usize,
 }
 
 impl Debug for Context {
@@ -52,21 +50,7 @@ impl<'a> Context {
             tactics_variables: HashMap::default(),
             formula_variables: HashMap::default(),
             subst_variables: HashMap::default(),
-            depth: 0,
         }
-    }
-
-    pub fn message(&self, message: &str) {
-        println!("{:indent$}{message}", "", indent = self.depth);
-    }
-
-    pub fn enter(&self, message: &str) {
-        self.message(&format!("Proving {}", DisplayPair(&self.goal, &self.db)));
-        self.message(&format!(">> {message}"));
-    }
-
-    pub fn exit(&self, message: &str) {
-        self.message(&format!("<< {message}"));
     }
 
     pub fn get_tactics_definition(&self, name: String) -> Option<&TacticsDefinition> {
@@ -85,7 +69,6 @@ impl<'a> Context {
             tactics_variables: self.tactics_variables.clone(),
             formula_variables: self.formula_variables.clone(),
             subst_variables: self.subst_variables.clone(),
-            depth: self.depth + 1,
         }
     }
 
@@ -103,7 +86,6 @@ impl<'a> Context {
             tactics_variables: self.tactics_variables.clone(),
             formula_variables: self.formula_variables.clone(),
             subst_variables: self.subst_variables.clone(),
-            depth: self.depth + 1,
         }
     }
 
@@ -119,7 +101,6 @@ impl<'a> Context {
             tactics_variables: self.tactics_variables.clone(),
             formula_variables: self.formula_variables.clone(),
             subst_variables: self.subst_variables.clone(),
-            depth: self.depth + 1,
         }
     }
 

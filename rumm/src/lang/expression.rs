@@ -1,5 +1,6 @@
 use crate::parser::FormulaOrSubstitutionListId;
 use crate::parser::OptionalTactics;
+use crate::trace::Trace;
 use std::sync::Arc;
 use crate::tactics::Tactics;
 use crate::error::Result;
@@ -124,8 +125,15 @@ impl TacticsExpression {
 		}
 	}
 
-	pub fn execute(&self, context: &mut Context) -> TacticsResult {
-		self.evaluate(&context)?.execute(context)
+	pub fn execute(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult  {
+        let tactics = self.evaluate(&context).unwrap();
+        let mut trace1 = trace.enter(context, &format!("tactics {}", tactics.get_name()));
+        let result = tactics.execute_intern(&mut trace1, context);
+        match result {
+            TacticsResult::Ok(_) => { trace.exit(trace1, &"tactics : success"); }
+            TacticsResult::Err(_) => { trace.exit(trace1, &"tactics : failure"); }
+        }
+        result
 	}
 }
 

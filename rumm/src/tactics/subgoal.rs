@@ -5,6 +5,7 @@ use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser};
 use crate::tactics::Tactics;
 use crate::tactics::TacticsResult;
+use crate::trace::Trace;
 use core::fmt::Formatter;
 
 /// A tactics which first solves subgoal,
@@ -49,19 +50,16 @@ impl Tactics for Subgoal {
         "A tactics which allows to insert a subgoal, prove it or assume it, and then move forward with the rest of the proof.".to_string()
     }
 
-    fn execute(&self, mut context: &mut Context) -> TacticsResult {
-        context.enter("Subgoal");
+    fn execute_intern(&self, trace: &mut Trace, mut context: &mut Context) -> TacticsResult {
         let subgoal = self.subgoal.evaluate(context)?.substitute(context.variables());
         let mut context1 = context.with_goal(subgoal.clone());
-        match self.tactics1.execute(&mut context1) {
+        match self.tactics1.execute(trace, &mut context1) {
             Ok(step1) => {
                 context.add_subgoal(subgoal, step1);
-                let res = self.tactics2.execute(&mut context);
-                context.exit("Subgoal complete");
+                let res = self.tactics2.execute(trace, &mut context);
                 res
             },
             Err(e) => {
-                context.exit("-- Subgoal failed --");
                 Err(e)
             }
         }

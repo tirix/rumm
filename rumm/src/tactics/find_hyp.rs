@@ -1,6 +1,5 @@
 use metamath_knife::formula::Substitutions;
 use metamath_knife::Formula;
-use crate::lang::DisplayPair;
 use crate::lang::FormulaExpression;
 use crate::lang::TacticsExpression;
 use crate::context::Context;
@@ -11,6 +10,7 @@ use crate::parser::{Parse, Parser};
 use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
+use crate::trace::Trace;
 use core::fmt::Formatter;
 
 
@@ -51,50 +51,47 @@ impl Tactics for FindHyp {
         "A tactics which searches for a hypothesis matching the given formula.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
+    fn execute_intern(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult {
         let target = self.formula.evaluate(context)?.substitute(context.variables());
-        context.enter(&format!("Find! {}", DisplayPair(&target, &context.db)));
+        trace.message(&format!("Find! {}", &target.to_string(&context.db)));
         for (label, formula) in context.clone().hypotheses().iter() {
-            context.message(&format!("Trying {}", DisplayPair(formula, &context.db)));
-            match self.check_match(context, &target, &*formula, |_subst| {
+            trace.message(&format!("Trying {}", formula.to_string(&context.db)));
+            match self.check_match(trace, context, &target, &*formula, |_subst| {
                 Ok(ProofStep::hyp(*label, formula.clone()))
             }) {
                 Ok(step) => {
-                    context.exit(&format!("Matched hypothesis {}", DisplayPair(formula, &context.db)));
                     return Ok(step);
                 },
                 Err(e) => {
-                    context.message(&format!("{:?}", e));
+                    trace.message(&format!("{:?}", e));
                 },
             }
         }
         for (hyp, step) in context.clone().subgoals().iter() {
-            context.message(&format!("Trying {}", DisplayPair(hyp, &context.db)));
-            match self.check_match(context, &target, &*hyp, |_subst| {
+            trace.message(&format!("Trying {}", hyp.to_string(&context.db)));
+            match self.check_match(trace, context, &target, &*hyp, |_subst| {
                 Ok(step.clone())
             }) {
                 Ok(step) => {
-                    context.exit(&format!("Matched subgoal {}", DisplayPair(hyp, &context.db)));
                     return Ok(step);
                 },
                 Err(e) => {
-                    context.message(&format!("{:?}", e));
+                    trace.message(&format!("{:?}", e));
                 },
             }
         }
-        context.exit("Find: No match found");
         Err(TacticsError::NoMatchFound)
     }
 }
 
 impl FindHyp {
-    fn check_match<F>(&self, context: &Context, target: &Formula, formula: &Formula, make_proof_step: F) -> TacticsResult
+    fn check_match<F>(&self, trace: &mut Trace, context: &Context, target: &Formula, formula: &Formula, make_proof_step: F) -> TacticsResult
         where F: Fn(&Box<Substitutions>) -> TacticsResult {
         let mut subst = Substitutions::new();
         formula.unify(&target, & mut subst)?;
         let step1 = make_proof_step(&Box::new(subst.clone()))?;
         let mut context2 = context.with_variables(&subst);
         context2.add_subgoal(step1.result().clone(), step1);
-        Ok(self.tactics.execute(&mut context2)?)
+        Ok(self.tactics.execute(trace, &mut context2)?)
     }
 }
