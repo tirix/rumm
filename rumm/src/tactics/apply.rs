@@ -1,5 +1,5 @@
-use crate::lang::DisplayPair;
 use crate::lang::SubstitutionListExpression;
+use crate::trace::Trace;
 use metamath_knife::formula::Substitutions;
 use crate::lang::TacticsExpression;
 use crate::context::Context;
@@ -66,35 +66,32 @@ impl Tactics for Apply {
         "A tactics which applies a given theorem to prove the goal.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
-        context.enter(&format!("Apply {}", DisplayPair(&self.theorem, &context.db)));
+    fn execute_intern(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult {
         // context.db.debug_formula(context.goal());
-        // println!("  vars:{}", DisplayPair(context.variables(), &context.db));
+        // println!("  vars:{}", context.variables().to_string(&context.db));
         let mut my_subst = Substitutions::default();
         for (l,f) in self.substitutions.evaluate(context)?.iter() {
-            context.message(format!("Subst: {} {}", DisplayPair(l, &context.db), DisplayPair(f, &context.db)).as_str());
+            trace.message(format!("Subst: {} {}", l.to_string(&context.db), f.to_string(&context.db)).as_str());
             my_subst.insert(*l, f.substitute(context.variables()));
         }
 
         let theorem = self.theorem.evaluate(context)?;
-        context.message(&format!(" Attempting apply {}", DisplayPair(&theorem, &context.db)));
+        trace.message(&format!(" Attempting apply {}", &theorem.to_string(&context.db)));
         if let Some((theorem_formula, hyps)) = context.get_theorem_formulas(theorem) {
             let mut subst = Substitutions::new();
             if let Err(e) = context.goal().unify(&theorem_formula, &mut subst) {
-                context.exit("Apply statement doesn't match");
                 return Err(e.into());
             }
             subst.extend(&my_subst);
-            // context.message(&format!("  subst:{}", DisplayPair(&subst, &context.db)));
+            // trace1.message(&format!("  subst:{}", &subst.to_string(&context.db)));
             if hyps.len() == self.subtactics.len() {
                 let mut substeps = vec![];
                 // TODO check count!
                 for ((_hyp_label, hyp_formula), tactics) in hyps.iter().zip(&self.subtactics) {
                     let sub_goal = hyp_formula.substitute(&subst);
                     let mut sub_context = context.with_goal(sub_goal);
-                    substeps.push(tactics.execute(&mut sub_context)?);
+                    substeps.push(tactics.execute(trace, &mut sub_context)?);
                 }
-                context.exit("Apply Unification success");
                 Ok(ProofStep::apply(
                     theorem,
                     substeps.into_boxed_slice(),
@@ -102,11 +99,9 @@ impl Tactics for Apply {
                     Box::new(subst),
                 ))
             } else {
-                context.exit("Apply Hyps don't match");
                 Err(TacticsError::WrongHypCount(self.subtactics.len(), hyps.len()))
             }
         } else {
-            context.exit("Unknown theorem label");
             Err(TacticsError::UnknownLabel(theorem))
         }
     }
