@@ -66,7 +66,7 @@ syl $p |- ( ph -> ch ) $= ( wi a1i mpd ) ABCDBCFAEGH $.
 ```
 Since `~syl`'s final statement, `( ph -> ch )`, does not include the `ps` wff variable, one has to provide it manually using the `with` keyword.
 ```
-{ apply ~syl ! ! with ~ps $ A e. V $ }
+{ apply ~syl ! ! with ~wps $ A e. V $ }
 ```
 
 ---
