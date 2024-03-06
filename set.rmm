@@ -110,8 +110,8 @@ tactics equality ()
 		$ ( ph -> ( x e. A |-> B ) = ( x e. A |-> C ) ) $ { apply ~mpteq2dv { use equality } }
 		$ ( ph -> ( x e. A |-> B ) = ( x e. C |-> D ) ) $ { apply ~mpteq12dv { use equality } { use equality } }
 
-		$ ( ph -> ( x e. A , y e. B |-> C ) = ( x e. A , y e. B |-> D ) ) $ { apply ~mpt2eq3dv { use equality } }
-		$ ( ph -> ( x e. A , y e. B |-> C ) = ( x e. D , y e. E |-> F ) ) $ { apply ~mpt2eq123dv { use equality } { use equality } { use equality } }
+		$ ( ph -> ( x e. A , y e. B |-> C ) = ( x e. A , y e. B |-> D ) ) $ { apply ~mpoeq3dv { use equality } }
+		$ ( ph -> ( x e. A , y e. B |-> C ) = ( x e. D , y e. E |-> F ) ) $ { apply ~mpoeq123dv { use equality } { use equality } { use equality } }
 
 		$ ( ph -> ( iota_ x e. A ps ) = ( iota_ x e. B ps ) ) $ { apply ~riotaeqdv { use equality } }
 		$ ( ph -> ( iota_ x e. A ps ) = ( iota_ x e. A ch ) ) $ { apply ~riotabidv { use equality } }
@@ -150,12 +150,12 @@ tactics existence ( +V +W )
 			{ apply ~elexd ! with ~cV $ &C2 $ }
 		}
 		$ ( &W1 -> ( &S1 e. &C1 , &S2 e. &C2 |-> &C3 ) e. _V ) $ 
-		{ apply ~syl2anc { use existence } { use existence } { apply ~mpt2exga } with ~wps $ &C1 e. _V $ ~wch $ &C2 e. _V $ }
+		{ apply ~syl2anc { use existence } { use existence } { apply ~mpoexga } with ~wps $ &C1 e. _V $ ~wch $ &C2 e. _V $ }
 		// { subgoal { use existence } $ ( &W1 -> &C1 e. _V ) $
 		//	{ subgoal { use existence } $ ( &W1 -> &C2 e. _V ) $
-		//	//	{ use deduction_apply ~mpt2exga { apply ~mpt2exga } }  // Here, deduction_apply did not work due to &C4 and &C5 not being identified correctly
+		//	//	{ use deduction_apply ~mpoexga { apply ~mpoexga } }  // Here, deduction_apply did not work due to &C4 and &C5 not being identified correctly
 		//		{ subgoal
-		//			{ apply ~mpt2exga }
+		//			{ apply ~mpoexga }
 		//			$ ( ( &C1 e. _V /\ &C2 e. _V ) -> ( &S1 e. &C1 , &S2 e. &C2 |-> &C3 ) e. _V ) $
 		//			{ apply ~syl2anc ! ! ! with ~wps $ &C1 e. _V $ ~wch $ &C2 e. _V $ }
 		//		}
@@ -267,7 +267,7 @@ tactics definition ( @T1 @T2 @T3 )
 		{ find
 			!
 			$ &C2 = ( &S1 e. &C5 , &S2 e. &C6 |-> &C7 ) $
-			{ apply ~ovmpt2d
+			{ apply ~ovmpod
 				{ apply ~a1i ! }
 				{ use normalize { use equality } }
 				@T1
@@ -285,7 +285,7 @@ tactics definition ( @T1 @T2 @T3 )
 		{ find
 			!
 			$ ( &W1 -> &C2 = ( &S1 e. &C5 , &S2 e. &C6 |-> &C7 ) ) $
-			{ apply ~ovmpt2d
+			{ apply ~ovmpod
 				!
 				{ use normalize { use equality } }
 				@T1
@@ -371,7 +371,7 @@ proof ~rummex1
 
 // 
 proof ~inftmrel
-{ apply ~syl6eqss
+{ apply ~eqsstrdi
 	{ use definition { use existence } { use existence } }
 	{ apply ~opabssxp }
 	with ~cB $ { <. x , y >. | ( ( x e. B /\ y e. B ) /\ ( ( 0g ` W ) ( lt ` W ) x /\ A. n e. NN ( n ( .g ` W ) x ) ( lt ` W ) y ) ) } $
