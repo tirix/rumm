@@ -125,10 +125,10 @@ tactics equality ()
 		$ ( ph -> if ( &W1 , &C1 , &C2 ) = if ( &W2 , &C1 , &C3 ) ) $ { apply ~ifbieq2d { use equality }  }
 		$ ( ph -> if ( &W1 , &C1 , &C2 ) = if ( &W2 , &C3 , &C4 ) ) $ { apply ~ifbieq12d { use equality }  }
 
-		$ ( ( ( ph /\ X = Y ) /\ ps ) -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
-		$ ( ( ph /\ X = Y ) -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
-		$ ( ( X = Y /\ ph ) -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
-		$ ( X = Y -> &C1 = &C2 ) $ { apply ~syl6eqr { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
+		$ ( ( ( ph /\ X = Y ) /\ ps ) -> &C1 = &C2 ) $ { apply ~eqtr4di { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
+		$ ( ( ph /\ X = Y ) -> &C1 = &C2 ) $ { apply ~eqtr4di { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
+		$ ( ( X = Y /\ ph ) -> &C1 = &C2 ) $ { apply ~eqtr4di { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
+		$ ( X = Y -> &C1 = &C2 ) $ { apply ~eqtr4di { use equality } ! with ~cB s/ $ X $ / $ Y $ / $ &C1 $ }
 	}
 }
 
