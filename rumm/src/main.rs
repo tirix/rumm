@@ -1,6 +1,7 @@
 //! A Metamath Proof Assistant
 
 mod context;
+mod trace;
 pub mod error;
 mod lang;
 pub mod parser;

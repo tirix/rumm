@@ -6,6 +6,7 @@ use crate::parser::{Parse, Parser, OptionalTactics};
 use crate::tactics::Tactics;
 use crate::tactics::TacticsError;
 use crate::tactics::TacticsResult;
+use crate::trace::Trace;
 use core::fmt::Formatter;
 
 /// A tactics which tries a list of tactics until one of them produces a proof.
@@ -43,20 +44,17 @@ impl Tactics for Try {
         "A tactics which tries a list of tactics until one of them produces a proof.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
-        context.enter("Try");
+    fn execute_intern(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult {
         for t in &self.tactics {
-            match t.execute(context) {
+            match t.execute(trace, context) {
                 Ok(step) => {
-                    context.exit("Try Successful");
                     return Ok(step);
                 },
                 Err(e) => {
-                    context.message(format!("{:?}",e).as_str());
+                    trace.message(format!("{:?}",e).as_str());
                 },
             }
         }
-        context.exit("-- Try Failed --");
         Err(TacticsError::NoMatchFound)
     }
 }

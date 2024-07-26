@@ -10,7 +10,6 @@ mod tactics_definition;
 pub use database::Db;
 pub use database::Hypotheses;
 pub use display::Display;
-pub use display::DisplayPair;
 pub use expression::Expression;
 pub use expression::FormulaExpression;
 pub use expression::StatementExpression;
