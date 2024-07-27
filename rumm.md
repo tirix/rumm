@@ -206,14 +206,14 @@ tactics example ( with *U )
 { match goal
     $ ( &W1 -> ( &W2 -> &W3 ) ) $
     { apply ~syl9
-		!
-		{ apply ~pm2.27 }
-		with ~wch s/ *U / $ &W3 $
-	}
+        !
+        { apply ~pm2.27 }
+        with ~wch s/ *U / $ &W3 $
+    }
 }
 
 proof ~com23 {
-	use example with ~wps $ ch $
+    use example with ~wps $ ch $
 }
 ```
 The metavariable  `&W3` holds the formula `( ps -> th )`, derived from the `match` tactic. The explicit substitution list given as parameter to the `use` tactic is then used to replace `ps` with `ch` in `&W3`, therefore deriving `( ch -> th )`, which is the sub-formula we need to prove [~com23](https://us.metamath.org/mpeuni/com23.html).
@@ -288,12 +288,12 @@ This feature is particularly useful when the full formula is not known:
 ```
 proof ~stdpc5v
 { match goal
-	$ ( A. x &W1 -> &W2 ) $
-	{ apply ~syl5
-		{ apply ~ax-5 }
-		{ apply ~alim }
-		with ~wps s/ $ &W1 $ / $ ph $ / $ A. x &W1 $
-	}
+    $ ( A. x &W1 -> &W2 ) $
+    { apply ~syl5
+        { apply ~ax-5 }
+        { apply ~alim }
+        with ~wps s/ $ &W1 $ / $ ph $ / $ A. x &W1 $
+    }
 }
 ```
 The metvariable `&W1` holds a wff expression determined by the match tactic, which can be subsequently extracted and replaced with the `s/` keyword as shown above.
