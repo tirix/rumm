@@ -186,7 +186,7 @@ proof ~ex1 {
     use example !
 }
 ```
-The following example contains a tactics script that takes a substitution list `*U` as paramenter.
+The following example contains a tactics script that takes a substitution list `*U` as parameter.
 Such parameter is used to prove the theorem [~pm2.43a](https://us.metamath.org/mpeuni/pm2.43a.html), where an explicit list is provided as substitution for `*U`.
 ```
 tactics example ( with *U )
@@ -216,7 +216,7 @@ proof ~com23 {
     use example with ~wps $ ch $
 }
 ```
-The metavariable  `&W3` holds the formula `( ps -> th )`, derived from the `match` tactic. The explicit substitution list given as parameter to the `use` tactic is then used to replace `ps` with `ch` in `&W3`, therefore deriving `( ch -> th )`, which is the sub-formula we need to prove [~com23](https://us.metamath.org/mpeuni/com23.html).
+The metavariable  `&W3` holds the formula `( ps -> th )`, derived from the `match` tactics. The explicit substitution list given as parameter to the `use` tactics is then used to replace `ps` with `ch` in `&W3`, therefore deriving `( ch -> th )`, which is the sub-formula we need to prove [~com23](https://us.metamath.org/mpeuni/com23.html).
 
 ---
 
