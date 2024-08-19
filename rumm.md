@@ -23,6 +23,10 @@ In addition, the `load` keyword tells the program to load the specified MM datab
 load <filename>
 ```
 
+## Metavariables
+
+For practical purposes, it's conveninent to make a distinction between formulas that contain metavariables and the ones that don't. Metavariables in Rumm conventionally start with `&` followed by an uppercase letter and a number. The [examples.mm](https://github.com/tirix/rumm/blob/master/rumm/examples/examples.mm) file defines `&W1`, `&W2` ... for well-formed formulas, `&C1`, `&C2`.. for classes and `&S1`, `&S2`.. for set variables. Technically, any variable can be used as metavariable, but for historical conventions (yamma, mmj2) and to avoid unexpected behaviour it's good practice to keep this notation.
+
 ## Tactics
 
 When evaluated, tactics generate proofs. Tactics are evaluated within a *context* with the following properties:
@@ -112,6 +116,22 @@ Example:
 If the current goal is an implication `->`, this tactics applies `@T1`.
 If it is a conjunction `/\`, it applies `@T2`.
 
+The metavariables used in the matched formula pattern hold an expression that can be used in the provided tactics:
+```
+proof ~alinexa
+{ match goal
+    $ ( A. x &W1 <-> -. E. x &W2 ) $
+    { apply ~bitri
+        { apply ~imnang }
+        { apply ~alnex }
+        with ~wps $ A. x -. &W2 $
+    }
+}
+```
+The example above provides a tactics-based proof of [~alinexa](https://us.metamath.org/mpeuni/alinexa.html). The goal matches with the provided formula pattern `$ ( A. x &W1 <-> -. E. x &W2 ) $`, therefore the metavariable `&W1` holds the wff formula `( ph -> -. ps )`, while `&W2` holds `( ph /\ ps )`. Since `~bitri`'s final statement does not include the wff variable `ps`, the expression carried by `&W2` is used by an apply tactics to provide a substitution for it.
+
+This mechanism is useful to imitate [mmj2](https://github.com/digama0/mmj2) work variables, which Rumm currently does not support. The main advantage of work variables is the ability to manipulate formulas without knowing their full extention during the proof process.
+
 ---
 
 ### **The `find` built-in tactics**
@@ -125,6 +145,27 @@ Then the second tactics is applied to prove the given formula itself.
 
 ---
 
+### **The `findhyp` built-in tactics**
+This tactics finds an hypothesis matching the given formula template and applies the given tactics when a match is found. 
+```
+{ findhyp <formula> <tactics> }
+```
+Similarly to the `match` tactics, the metavariables in the formula template can be used in the provided tactic to resolve the goal.
+```
+proof ~con3i
+{ findhyp
+    $ ( &W1 -> &W2 ) $
+    { apply ~nsyl
+        { apply ~id }
+        !
+        with ~wps $ &W2 $
+    }
+}
+```
+The above example provides a tactics-based proof of [~con3i](https://us.metamath.org/mpeuni/con3i.html). The metavariable `&W1` holds the wff formula `ph`, while `&W2` holds the wff formula `ps`, the latter is used by the `with` keyword to provide a formula for the unknown wff variable of `~nsyl`.
+
+---
+
 ### **The `use` built-in tactics**
 
 This tactics allows to use a generic tactics script.
@@ -132,7 +173,7 @@ This tactics allows to use a generic tactics script.
 { use <tactics name> <parameter> ... <parameter> }
 ```
 Each parameter is evaluated, and the tactics script is executed with additional context variables corresponding to each of the parameters.
-The `<parameter>` tag represents either a formula `<formula>`, a theorem `<statement>` or a tactics `<tactics>` expression.
+The `<parameter>` tag represents either a formula `<formula>`, a theorem `<statement>`, a tactics `<tactics>` or a substitution list provided with the `with` keyword.
 
 In the example below, a tactics script named "example" is defined, taking one tactics parameter named `@T`.
 It is then used to prove a theorem `~ex1`, whereas the tactics `!` is going to be applied for parameter `@T`.
@@ -145,6 +186,37 @@ proof ~ex1 {
     use example !
 }
 ```
+The following example contains a tactics script that takes a substitution list `*U` as parameter.
+Such parameter is used to prove the theorem [~pm2.43a](https://us.metamath.org/mpeuni/pm2.43a.html), where an explicit list is provided as substitution for `*U`.
+```
+tactics example ( with *U )
+{ apply ~mpid 
+    { apply ~id }
+    !
+    with *U
+}
+
+proof ~pm2.43a {
+    use example with ~wch $ ps $
+}
+```
+The `with` keyword can also be combined with the substitution keyword `s/`:
+```
+tactics example ( with *U )
+{ match goal
+    $ ( &W1 -> ( &W2 -> &W3 ) ) $
+    { apply ~syl9
+        !
+        { apply ~pm2.27 }
+        with ~wch s/ *U / $ &W3 $
+    }
+}
+
+proof ~com23 {
+    use example with ~wps $ ch $
+}
+```
+The metavariable  `&W3` holds the formula `( ps -> th )`, derived from the `match` tactics. The explicit substitution list given as parameter to the `use` tactics is then used to replace `ps` with `ch` in `&W3`, therefore deriving `( ch -> th )`, which is the sub-formula we need to prove [~com23](https://us.metamath.org/mpeuni/com23.html).
 
 ---
 
@@ -191,5 +263,39 @@ For example, this would resolve to `( ph -> ch )`:
 ```
 statement ~syl
 ```
+---
+
+### **The substitution `s/` keyword**
+The substitution keyword replaces a subformula inside a formula with another formula.
+
+```
+s/ <formula> / <formula> / <formula>
+```
+
+The first formula is the subformula that we want to replace, while the second formula is the replacement of the first formula. The third formula is the expression where the replacement is applied.
+
+In the following example, the wff formula `( ph -> ps )` is substituted with `ph` in `$ A. x ( ph -> ps ) $`, therefore resulting in `$ A. x ph $`, which is what is needed to prove [~stdpc5v](https://us.metamath.org/mpeuni/stdpc5v.html).
+
+```
+proof ~stdpc5v
+{ apply ~syl5
+    { apply ~ax-5 }
+    { apply ~alim }
+    with ~wps s/ $ ( ph -> ps ) $ / $ ph $ / $ A. x ( ph -> ps ) $
+}
+```
+This feature is particularly useful when the full formula is not known:
+```
+proof ~stdpc5v
+{ match goal
+    $ ( A. x &W1 -> &W2 ) $
+    { apply ~syl5
+        { apply ~ax-5 }
+        { apply ~alim }
+        with ~wps s/ $ &W1 $ / $ ph $ / $ A. x &W1 $
+    }
+}
+```
+The metvariable `&W1` holds a wff expression determined by the match tactic, which can be subsequently extracted and replaced with the `s/` keyword as shown above.
 
 ---
