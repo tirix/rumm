@@ -28,6 +28,7 @@ use crate::context::Context;
 use crate::lang::Display;
 use crate::lang::ProofStep;
 use crate::parser::Parse;
+use crate::trace::Trace;
 
 pub type TacticsResult<T = ProofStep> = std::result::Result<T, TacticsError>;
 
@@ -59,7 +60,16 @@ pub trait Tactics: Parse + Display {
     fn get_name(&self) -> String;
     //fn arg_types(&self) ->
     fn get_desc(&self) -> String;
-    fn execute(&self, context: &mut Context) -> TacticsResult;
+    fn execute_intern(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult;
+    fn execute (&self, trace: &mut Trace, context: &mut Context) -> TacticsResult where Self: Sized {
+        let mut trace1 = trace.enter(context, &self.to_string(&context.db));
+        let result = self.execute_intern(&mut trace1, context);
+        match result {
+            TacticsResult::Ok(_) => { trace.exit(trace1, &format!("{} : success", &self.to_string(&context.db))); }
+            TacticsResult::Err(_) => { trace.exit(trace1, &format!("{} : failure", &self.to_string(&context.db))); } // "{e:?}"
+        }
+        result
+    }
 
     /// Return a Arc to the tactics.
     fn into_arc(self) -> Arc<dyn Tactics>

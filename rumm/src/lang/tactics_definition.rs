@@ -7,6 +7,7 @@ use crate::lang::ParameterDefinition;
 use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser, Token};
 use crate::tactics::TacticsResult;
+use crate::trace::Trace;
 use core::fmt::Formatter;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -93,8 +94,8 @@ impl TacticsDefinition {
     //		self.description.clone()
     //	}
     //
-    pub fn execute(&self, context: &mut Context) -> TacticsResult {
-        self.tactics.execute(context)
+    pub fn execute(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult {
+        self.tactics.execute(trace, context)
     }
 
     pub fn add_variables(&self, context: &mut Context, parameters: &Vec<Expression>) -> TacticsResult<()> {

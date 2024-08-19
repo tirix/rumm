@@ -1,10 +1,10 @@
 use crate::lang::TacticsExpression;
+use crate::trace::Trace;
 use metamath_knife::Formula;
 use metamath_knife::formula::Substitutions;
 use crate::lang::FormulaExpression;
 use crate::context::Context;
 use crate::error::Result;
-use crate::lang::DisplayPair;
 use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser};
 use crate::tactics::Tactics;
@@ -44,15 +44,14 @@ impl Parse for Match {
 
 impl Tactics for Match {
     fn get_name(&self) -> String {
-        "try".to_string()
+        "match".to_string()
     }
 
     fn get_desc(&self) -> String {
-        "A tactics which tries a list of tactics until one of them produces a proof.".to_string()
+        "A tactics which tries matching against a list of templates until one of them produces a proof.".to_string()
     }
 
-    fn execute(&self, context: &mut Context) -> TacticsResult {
-        context.enter("Match");
+    fn execute_intern(&self, trace: &mut Trace, context: &mut Context) -> TacticsResult {
         let model = self.target.evaluate(&context)?.substitute(context.variables());
         // match &self.target {
         //     FormulaExpression::Formula(formula) => formula.substitute(context.variables()),
@@ -61,32 +60,30 @@ impl Tactics for Match {
         //         .ok_or(TacticsError::Error)?.0, // unknown statement
             
         // };
-        context.message(&format!("Target {}", DisplayPair(&model, &context.db)));
+        trace.message(&format!("Target {}", &model.to_string(&context.db)));
 //        context.message(format!("{}", context.debug_formula(&model)));
         for m in self.matches.iter() {
             let m2 = m.0.substitute(context.variables());
-            context.message(&format!("Trying {}", DisplayPair(&m2, &context.db)));
+            trace.message(&format!("Trying {}", &m2.to_string(&context.db)));
 //            context.message(format!("  {}", context.debug_formula(&m2))));
             let mut subst = Substitutions::new();
             if let std::result::Result::Ok(_) = model.unify(&m2, &mut subst) {
-                context.message(&format!(
+                trace.message(&format!(
                     "Matched {} with {}",
-                    DisplayPair(&model, &context.db),
-                    DisplayPair(&m2, &context.db)
+                    &model.to_string(&context.db),
+                    &m2.to_string(&context.db)
                 ));
                 let mut sub_context = context.with_variables(&subst);
-                match m.1.execute(&mut sub_context) {
+                match m.1.execute(trace, &mut sub_context) {
                     Ok(step) => {
-                        context.exit("Match successful");
                         return Ok(step);
                     },
                     Err(e) => {
-                        context.message(format!("{:?}", e).as_str());
+                        trace.message(format!("{:?}", e).as_str());
                     },
                 }
             }
         }
-        context.exit("-- Match failed --");
         Err(TacticsError::NoMatchFound)
     }
 }
