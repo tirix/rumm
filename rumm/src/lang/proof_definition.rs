@@ -6,10 +6,10 @@ use crate::lang::{Db, Display};
 use crate::parser::{Parse, Parser};
 use crate::tactics::TacticsError;
 use core::fmt::Formatter;
-use metamath_knife::formula::Substitutions;
-use metamath_knife::proof::ProofTreeArray;
-use metamath_knife::Formula;
-use metamath_knife::Label;
+use metamath_rs::formula::Substitutions;
+use metamath_rs::proof::ProofTreeArray;
+use metamath_rs::Formula;
+use metamath_rs::Label;
 
 #[derive(Clone)]
 /// One step in a proof

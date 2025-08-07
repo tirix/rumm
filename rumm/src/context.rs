@@ -7,9 +7,9 @@ use crate::lang::Hypotheses;
 use crate::lang::TacticsDefinition;
 use crate::lang::TacticsDict;
 use core::fmt::{Debug, Formatter};
-use metamath_knife::formula::Substitutions;
-use metamath_knife::Formula;
-use metamath_knife::Label;
+use metamath_rs::formula::Substitutions;
+use metamath_rs::Formula;
+use metamath_rs::Label;
 use std::collections::HashMap;
 
 #[derive(Clone)]

@@ -8,9 +8,9 @@ use crate::parser::Parse;
 use crate::parser::Token;
 use crate::tactics::{TacticsError, TacticsResult};
 use crate::context::Context;
-use metamath_knife::Formula;
-use metamath_knife::Label;
-use metamath_knife::formula::Substitutions;
+use metamath_rs::Formula;
+use metamath_rs::Label;
+use metamath_rs::formula::Substitutions;
 use crate::lang::{Db, Display};
 use core::fmt::Formatter;
 
