@@ -127,16 +127,19 @@ impl Db {
         println!("{:?}", f.as_ref(&database));
     }
 
-    pub fn statements(&self) -> impl Iterator<Item = (Label, Formula, Hypotheses)> + '_ {
+    pub fn statements(&self, filter: impl Fn(bool, &[u8]) -> bool) -> impl Iterator<Item = (Label, Formula, Hypotheses)> + '_ {
         let database = self.intern.borrow();
         let nset = database.name_result().clone();
         database.statements().filter_map(move |sref| {
             match sref.statement_type() {
                 StatementType::Axiom | StatementType::Provable => {
+                    let is_axiom = sref.statement_type() == StatementType::Axiom;
                     let name = sref.label();
-                    let label = nset.lookup_label(name)?.atom;
-                    let (formula, hyps) = self.get_theorem_formulas(label)?;
-                    Some((label, formula, hyps))
+                    if filter(is_axiom, name) {
+                        let label = nset.lookup_label(name)?.atom;
+                        let (formula, hyps) = self.get_theorem_formulas(label)?;
+                        Some((label, formula, hyps))
+                    } else { None }
                 },
                 _ => None,
             }

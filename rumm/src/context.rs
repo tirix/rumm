@@ -171,8 +171,8 @@ impl<'a> Context {
     pub fn get_theorem_formulas(&self, label: Label) -> Option<(Formula, Hypotheses)> {
         self.db.get_theorem_formulas(label)
     }
-    pub fn statements(&self) -> impl Iterator<Item = (Label, Formula, Hypotheses)> + '_ {
-        self.db.statements()
+    pub fn statements(&self, filter: impl Fn(bool, &[u8]) -> bool) -> impl Iterator<Item = (Label, Formula, Hypotheses)> + '_ {
+        self.db.statements(filter)
     }
 //    pub fn debug_formula(&self, f: &Formula) -> String {
 //        self.db.debug_formula(f)

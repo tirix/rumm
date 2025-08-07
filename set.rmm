@@ -92,6 +92,7 @@ tactics equality ()
 		$ ( ph -> ( A O B ) = ( A P B ) ) $ { apply ~oveqd { use equality } }
 		$ ( ph -> ( A O B ) = ( C O B ) ) $ { apply ~oveq1d { use equality } }
 		$ ( ph -> ( A O B ) = ( A O C ) ) $ { apply ~oveq2d { use equality } }
+		$ ( ph -> ( A O B ) = ( C O D ) ) $ { apply ~oveq12d { use equality } { use equality } }
 		$ ( ph -> ( F ` A ) = ( G ` A ) ) $ { apply ~fveq1d { use equality } }
 		$ ( ph -> ( F ` A ) = ( F ` B ) ) $ { apply ~fveq2d { use equality } }
 		$ ( ph -> ( F ` A ) = ( G ` B ) ) $ { apply ~fveq12d { use equality } { use equality } }
@@ -410,6 +411,27 @@ proof ~ismidb
 		}
 	}
 }
+
+// Test of finddf
+proof ~df-mod
+{ finddf ? $ &C2 = ( &S1 e. &C5 , &S2 e. &C6 |-> &C7 ) $ ? }
+
+// Test for the cbv tactics
+proof ~df-mod
+{ use justify ~df-mod with ~vx $ &S5 $ ~vy $ &S6 $ }
+
+tactics cbv ()
+{ match goal
+	$ ( &S1 e. A , &S2 e. B |-> C ) = ( &S3 e. A , &S4 e. B |-> D ) $ { apply ~cbvmpov { use equality } { use equality } with ~cE s/ $ &S1 $ / $ &S3 $ / $ C $ }
+	// to be completed!
+}
+
+tactics justify ( ≈S with *U )
+{ match goal 
+   $ &C1 = &C2 $
+   { apply ~eqtri { apply ≈S } { use cbv } with ~cB s/ *U / $ &C2 $ }
+}
+
 
 // proof ~isleag2lem
 // {	subgoal
