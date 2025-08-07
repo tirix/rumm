@@ -411,6 +411,21 @@ proof ~ismidb
 	}
 }
 
+proof ~df-mod
+{ use justify ~df-mod with ~vx $ V1 $ ~vy $ V2 $ }
+
+tactics cbv
+{
+	?
+}
+
+tactics justify ( ≈S with *U )
+{ match goal 
+   $ &C1 = &C2 $
+   { apply ~eqtri { apply ≈S } cbv with ~cB s/ *U / $ &C2 $ }
+}
+
+
 // proof ~isleag2lem
 // {	subgoal
 //	{ apply ~mpbid

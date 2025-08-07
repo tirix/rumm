@@ -22,6 +22,7 @@ pub use skipped::Skipped;
 pub use subgoal::Subgoal;
 pub use find_hyp::FindHyp;
 pub use find::Find;
+pub use find::FindDf;
 pub use use_script_tactics::UseScriptTactics;
 
 use crate::context::Context;
