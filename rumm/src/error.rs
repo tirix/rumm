@@ -1,6 +1,6 @@
 use crate::parser::Token;
 use annotate_snippets::{snippet::{Snippet, Annotation, AnnotationType, Slice, SourceAnnotation}, display_list::FormatOptions};
-use metamath_knife::{diag::{Diagnostic, StmtParseError}, statement::StatementAddress};
+use metamath_rs::{diag::{Diagnostic, StmtParseError}, statement::StatementAddress};
 use typed_arena::Arena;
 
 

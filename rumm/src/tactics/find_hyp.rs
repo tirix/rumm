@@ -1,5 +1,5 @@
-use metamath_knife::formula::Substitutions;
-use metamath_knife::Formula;
+use metamath_rs::formula::Substitutions;
+use metamath_rs::Formula;
 use crate::lang::DisplayPair;
 use crate::lang::FormulaExpression;
 use crate::lang::TacticsExpression;

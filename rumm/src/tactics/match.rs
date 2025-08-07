@@ -1,6 +1,6 @@
 use crate::lang::TacticsExpression;
-use metamath_knife::Formula;
-use metamath_knife::formula::Substitutions;
+use metamath_rs::Formula;
+use metamath_rs::formula::Substitutions;
 use crate::lang::FormulaExpression;
 use crate::context::Context;
 use crate::error::Result;

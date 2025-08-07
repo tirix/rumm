@@ -3,20 +3,20 @@ use crate::lang::Display;
 use crate::tactics::{TacticsResult, TacticsError};
 
 use colored::*;
-use metamath_knife::grammar::FormulaToken;
+use metamath_rs::grammar::FormulaToken;
 use core::cell::RefCell;
 use core::fmt::Formatter;
-use metamath_knife::as_str;
-use metamath_knife::database::DbOptions;
-use metamath_knife::diag::{DiagnosticClass, StmtParseError};
-use metamath_knife::formula::Substitutions;
-use metamath_knife::proof::ProofTreeArray;
-use metamath_knife::verify::ProofBuilder;
-use metamath_knife::Database;
-use metamath_knife::Formula;
-use metamath_knife::Label;
-use metamath_knife::StatementType;
-use metamath_knife::Symbol;
+use metamath_rs::as_str;
+use metamath_rs::database::DbOptions;
+use metamath_rs::diag::StmtParseError;
+use metamath_rs::formula::Substitutions;
+use metamath_rs::proof::ProofTreeArray;
+use metamath_rs::verify::ProofBuilder;
+use metamath_rs::Database;
+use metamath_rs::Formula;
+use metamath_rs::Label;
+use metamath_rs::StatementType;
+use metamath_rs::Symbol;
 use std::ops::Deref;
 use std::io::Write;
 use std::sync::Arc;
@@ -48,7 +48,7 @@ impl Db {
 
         print!("Loading \"{}\" ... ", filename);
         database.parse(filename.to_string(), Vec::new());
-        let err = database.diag_notations(&[DiagnosticClass::Parse]);
+        let err = database.diag_notations();
         if !err.is_empty() {
             return Err(Error::DBError(filename.to_string(), err).into());
         }
@@ -56,7 +56,7 @@ impl Db {
 
         print!("Building \"{}\" grammar... ", filename);
         database.grammar_pass();
-        let gerr = database.diag_notations(&[DiagnosticClass::Grammar]);
+        let gerr = database.diag_notations();
         if !gerr.is_empty() {
             return Err(Error::DBError(filename.to_string(), gerr).into());
         }
@@ -64,7 +64,7 @@ impl Db {
 
         print!("Parsing \"{}\"... ", filename);
         database.stmt_parse_pass();
-        let gerr = database.diag_notations(&[DiagnosticClass::StmtParse]);
+        let gerr = database.diag_notations();
         if !gerr.is_empty() {
             return Err(Error::DBError(filename.to_string(), gerr).into());
         }
@@ -101,7 +101,7 @@ impl Db {
         Some((formula, hypotheses.into_boxed_slice()))
     }
 
-    pub fn parse_formula(&self, symbols: Vec<FormulaToken>) -> std::result::Result<Formula, StmtParseError> {
+    pub fn parse_formula(&self, symbols: Vec<std::result::Result<FormulaToken, StmtParseError>>) -> std::result::Result<Formula, StmtParseError> {
         let database = self.intern.borrow();
         let grammar = database.grammar_result().clone();
         let nset = database.name_result();

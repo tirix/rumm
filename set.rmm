@@ -393,7 +393,7 @@ proof ~ellimc
 }
 
 proof ~ajfval
-{ apply ~syl5eq ! { use definition { use deduction } { use deduction } { use existence $ ( Y ^m X ) $ $ ( X ^m Y ) $ } } with ~cB $ ( U adj W ) $ }
+{ apply ~eqtrid ! { use definition { use deduction } { use deduction } { use existence $ ( Y ^m X ) $ $ ( X ^m Y ) $ } } with ~cB $ ( U adj W ) $ }
 
 proof ~ismidb
 { subgoal

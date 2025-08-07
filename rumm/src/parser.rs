@@ -4,9 +4,10 @@ use crate::lang::*;
 use crate::script::Script;
 use crate::tactics::*;
 use logos::{Lexer, Logos};
-use metamath_knife::{Formula, Span, Symbol};
-use metamath_knife::Label;
-use metamath_knife::grammar::FormulaToken;
+use metamath_rs::diag::StmtParseError;
+use metamath_rs::{Formula, Span, Symbol};
+use metamath_rs::Label;
+use metamath_rs::grammar::FormulaToken;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::ops::ControlFlow;
@@ -359,16 +360,16 @@ impl<'a> Parser<'a> {
 
     pub fn parse_mm_formula(&mut self) -> Result<Formula> {
         let mut mmlex = self.lexer.to_owned().morph();
-        let mut symbols = Vec::new();
+        let mut symbols: Vec<std::result::Result<FormulaToken, StmtParseError>> = Vec::new();
         for t in &mut mmlex {
             let lspan = self.lexer.span();
             let span = Span::new(lspan.start, lspan.end);
             match t {
                 MMToken::Token(name) => {
-                    symbols.push(FormulaToken { symbol: self.get_symbol(name)?, span });
+                    symbols.push(Ok(FormulaToken { symbol: self.get_symbol(name)?, span }));
                 }
                 MMToken::Variable(name) => {
-                    symbols.push(FormulaToken { symbol: self.get_symbol(name)?, span });
+                    symbols.push(Ok(FormulaToken { symbol: self.get_symbol(name)?, span }));
                 }
                 MMToken::End => {
                     break;
