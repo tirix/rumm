@@ -80,7 +80,7 @@ impl dyn FilterFind {
     fn check_match<F>(&self, context: &Context, target: &Formula, formula: &Formula, tactics2: &TacticsExpression, make_proof_step: F) -> TacticsResult
         where F: Fn(&Box<Substitutions>) -> TacticsResult {
         let mut subst = Substitutions::new();
-        formula.unify(&target, & mut subst)?;
+        target.unify(&formula, & mut subst)?;
         let step1 = make_proof_step(&Box::new(subst.clone()))?;
         let mut context2 = context.with_variables(&subst);
         context2.add_subgoal(step1.result().clone(), step1);
