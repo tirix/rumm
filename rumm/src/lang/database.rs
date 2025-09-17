@@ -130,12 +130,13 @@ impl Db {
     pub fn statements(&self, filter: impl Fn(bool, &[u8]) -> bool) -> impl Iterator<Item = (Label, Formula, Hypotheses)> + '_ {
         let database = self.intern.borrow();
         let nset = database.name_result().clone();
+        let provable = database.grammar_result().provable_typecode();
         database.statements().filter_map(move |sref| {
             match sref.statement_type() {
                 StatementType::Axiom | StatementType::Provable => {
                     let is_axiom = sref.statement_type() == StatementType::Axiom;
                     let name = sref.label();
-                    if filter(is_axiom, name) {
+                    if nset.get_atom(&sref.math_at(0)) == provable && filter(is_axiom, name) {
                         let label = nset.lookup_label(name)?.atom;
                         let (formula, hyps) = self.get_theorem_formulas(label)?;
                         Some((label, formula, hyps))
